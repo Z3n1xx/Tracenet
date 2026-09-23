@@ -16,11 +16,17 @@ export default function CasesScreen() {
   const [cases, setCases] = useState([]);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'reports'), (snap) => {
-      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      rows.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
-      setCases(rows);
-    });
+    const unsubscribe = onSnapshot(
+      collection(db, 'reports'),
+      (snap) => {
+        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        rows.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+        setCases(rows);
+      },
+      (error) => {
+        if (error.code !== 'permission-denied') console.warn('Cases listener error:', error);
+      }
+    );
     return unsubscribe;
   }, []);
 

@@ -49,14 +49,21 @@ export default function CaseStatusScreen() {
 
   useEffect(() => {
     if (!id) return;
-    const unsubscribe = onSnapshot(doc(db, 'reports', id), (snap) => {
-      setLoading(false);
-      if (snap.exists()) {
-        setCaseData({ id: snap.id, ...snap.data() });
-      } else {
-        setCaseData(null);
+    const unsubscribe = onSnapshot(
+      doc(db, 'reports', id),
+      (snap) => {
+        setLoading(false);
+        if (snap.exists()) {
+          setCaseData({ id: snap.id, ...snap.data() });
+        } else {
+          setCaseData(null);
+        }
+      },
+      (error) => {
+        setLoading(false);
+        if (error.code !== 'permission-denied') console.warn('Case status listener error:', error);
       }
-    });
+    );
     return unsubscribe;
   }, [id]);
 

@@ -2,22 +2,19 @@ import { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../services/firebase';
+import { auth } from '../services/firebase';
 import Colors from '../constants/colors';
 
 export default function StarterScreen() {
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) {
         setCheckingAuth(false);
         return;
       }
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      const role = userDoc.exists() ? userDoc.data().role : null;
-      router.replace(role === 'Barangay Official' ? '/barangay-dashboard' : '/(tabs)');
+      router.replace('/(tabs)');
     });
     return unsubscribe;
   }, []);

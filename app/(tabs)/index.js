@@ -1,23 +1,46 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../../services/firebase';
+import { notifyStatusChange, requestNotificationPermission } from '../../services/notifications';
 import Colors from '../../constants/colors';
 
 export default function HomeScreen() {
   const [cases, setCases] = useState([]);
+  const previousStatuses = useRef(null);
+
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
 
   useEffect(() => {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
     const q = query(collection(db, 'reports'), where('reportedByUid', '==', uid));
-    const unsubscribe = onSnapshot(q, (snap) => {
-      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      rows.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
-      setCases(rows);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snap) => {
+        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        rows.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+
+        if (previousStatuses.current) {
+          for (const row of rows) {
+            const prevStatus = previousStatuses.current.get(row.id);
+            if (prevStatus && prevStatus !== row.status && row.status) {
+              notifyStatusChange(row.name, row.status);
+            }
+          }
+        }
+        previousStatuses.current = new Map(rows.map((r) => [r.id, r.status]));
+
+        setCases(rows);
+      },
+      (error) => {
+        if (error.code !== 'permission-denied') console.warn('Home cases listener error:', error);
+      }
+    );
     return unsubscribe;
   }, []);
 
@@ -114,13 +137,6 @@ export default function HomeScreen() {
             </View>
           </View>
         ))}
-
-        <TouchableOpacity
-          style={styles.demoLink}
-          onPress={() => router.push('/barangay-dashboard')}
-        >
-          <Text style={styles.demoLinkText}>Barangay Official View (Demo) →</Text>
-        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.demoLink}

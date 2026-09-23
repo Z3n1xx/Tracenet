@@ -5,8 +5,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../../services/firebase';
+import { auth } from '../../services/firebase';
 import Colors from '../../constants/colors';
 
 const AUTH_ERROR_MESSAGES = {
@@ -31,14 +30,8 @@ export default function LoginScreen() {
     setLoading(true);
     setError('');
     try {
-      const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
-      const userDoc = await getDoc(doc(db, 'users', credential.user.uid));
-      const role = userDoc.exists() ? userDoc.data().role : null;
-      if (role === 'Barangay Official') {
-        router.replace('/barangay-dashboard');
-      } else {
-        router.replace('/(tabs)');
-      }
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+      router.replace('/(tabs)');
     } catch (e) {
       setError(AUTH_ERROR_MESSAGES[e.code] || 'Sign in failed. Please try again.');
     } finally {

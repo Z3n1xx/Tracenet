@@ -6,6 +6,7 @@ function TabIcon({ label, focused }) {
   const icons = {
     Home: focused ? '🏠' : '🏚️',
     Cases: focused ? '👥' : '👤',
+    Map: '🗺️',
     Alerts: focused ? '🔔' : '🔕',
   };
   return (
@@ -38,13 +39,18 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="map"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon label="Map" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="alerts"
         options={{
           tabBarIcon: ({ focused }) => <TabIcon label="Alerts" focused={focused} />,
         }}
       />
       <Tabs.Screen name="report" options={{ href: null }} />
-      <Tabs.Screen name="map" options={{ href: null }} />
     </Tabs>
   );
 }

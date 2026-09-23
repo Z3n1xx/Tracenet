@@ -9,7 +9,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../services/firebase';
 import Colors from '../../constants/colors';
 
-const ROLES = ['Citizen / Family Member', 'Police Officer', 'Barangay Official'];
+const ROLE = 'Citizen / Family Member';
 
 const AUTH_ERROR_MESSAGES = {
   'auth/email-already-in-use': 'An account with this email already exists.',
@@ -21,10 +21,8 @@ export default function RegisterScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [contactNumber, setContactNumber] = useState('');
-  const [role, setRole] = useState('Citizen / Family Member');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showRoles, setShowRoles] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -50,14 +48,10 @@ export default function RegisterScreen() {
         name,
         email: email.trim(),
         contactNumber,
-        role,
+        role: ROLE,
         createdAt: serverTimestamp(),
       });
-      if (role === 'Barangay Official') {
-        router.replace('/barangay-dashboard');
-      } else {
-        router.replace('/(tabs)');
-      }
+      router.replace('/(tabs)');
     } catch (e) {
       setError(AUTH_ERROR_MESSAGES[e.code] || 'Registration failed. Please try again.');
     } finally {
@@ -113,27 +107,12 @@ export default function RegisterScreen() {
         />
 
         <Text style={styles.label}>Role</Text>
-        <TouchableOpacity
-          style={styles.roleSelector}
-          onPress={() => setShowRoles(!showRoles)}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.roleSelectorText}>{role}</Text>
-          <Text style={styles.roleArrow}>{showRoles ? '▲' : '▼'}</Text>
-        </TouchableOpacity>
-        {showRoles && (
-          <View style={styles.roleDropdown}>
-            {ROLES.map((r) => (
-              <TouchableOpacity
-                key={r}
-                style={[styles.roleOption, role === r && styles.roleOptionActive]}
-                onPress={() => { setRole(r); setShowRoles(false); }}
-              >
-                <Text style={[styles.roleOptionText, role === r && styles.roleOptionTextActive]}>{r}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+        <View style={styles.roleSelector}>
+          <Text style={styles.roleSelectorText}>{ROLE}</Text>
+        </View>
+        <Text style={styles.roleHint}>
+          Barangay officials and police officers use a separate portal.
+        </Text>
 
         <Text style={styles.label}>Password</Text>
         <TextInput
@@ -211,26 +190,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 13,
     backgroundColor: Colors.background,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
   },
   roleSelectorText: { fontSize: 14, color: Colors.textDark },
-  roleArrow: { fontSize: 12, color: Colors.textGray },
-  roleDropdown: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 10,
-    backgroundColor: Colors.white,
-    marginBottom: 14,
-    overflow: 'hidden',
-    elevation: 4,
-  },
-  roleOption: { padding: 13, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  roleOptionActive: { backgroundColor: Colors.primaryLight },
-  roleOptionText: { fontSize: 14, color: Colors.textDark },
-  roleOptionTextActive: { color: Colors.primary, fontWeight: '700' },
+  roleHint: { fontSize: 11, color: Colors.textGray, marginTop: 6, marginBottom: 14 },
   button: {
     backgroundColor: Colors.primary,
     borderRadius: 12,
