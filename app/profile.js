@@ -4,10 +4,17 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { updateProfile } from 'firebase/auth';
+import { updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import Colors from '../constants/colors';
+
+const PASSWORD_ERROR_MESSAGES = {
+  'auth/invalid-credential': 'Current password is incorrect.',
+  'auth/wrong-password': 'Current password is incorrect.',
+  'auth/weak-password': 'New password must be at least 6 characters.',
+  'auth/too-many-requests': 'Too many attempts. Please try again later.',
+};
 
 export default function ProfileScreen() {
   const [name, setName] = useState('');
@@ -17,6 +24,13 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordChanged, setPasswordChanged] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -52,6 +66,37 @@ export default function ProfileScreen() {
       setError('Failed to save changes. Please try again.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      setPasswordError('Please fill in all password fields.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError('New passwords do not match.');
+      return;
+    }
+    setChangingPassword(true);
+    setPasswordError('');
+    setPasswordChanged(false);
+    try {
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await updatePassword(auth.currentUser, newPassword);
+      setPasswordChanged(true);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (e) {
+      setPasswordError(PASSWORD_ERROR_MESSAGES[e.code] || 'Failed to change password. Please try again.');
+    } finally {
+      setChangingPassword(false);
     }
   }
 
@@ -110,6 +155,52 @@ export default function ProfileScreen() {
         >
           <Text style={styles.buttonText}>{saving ? 'Saving...' : 'Save Changes'}</Text>
         </TouchableOpacity>
+
+        <View style={styles.divider} />
+
+        <Text style={styles.sectionTitle}>Change Password</Text>
+        {passwordError ? <Text style={styles.error}>{passwordError}</Text> : null}
+        {passwordChanged ? <Text style={styles.saved}>Password changed.</Text> : null}
+
+        <Text style={styles.label}>Current Password</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="••••••••"
+          placeholderTextColor={Colors.textGray}
+          value={currentPassword}
+          onChangeText={(v) => { setCurrentPassword(v); setPasswordChanged(false); }}
+          secureTextEntry
+        />
+
+        <Text style={styles.label}>New Password</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="At least 6 characters"
+          placeholderTextColor={Colors.textGray}
+          value={newPassword}
+          onChangeText={(v) => { setNewPassword(v); setPasswordChanged(false); }}
+          secureTextEntry
+        />
+
+        <Text style={styles.label}>Confirm New Password</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Re-enter new password"
+          placeholderTextColor={Colors.textGray}
+          value={confirmNewPassword}
+          onChangeText={(v) => { setConfirmNewPassword(v); setPasswordChanged(false); }}
+          secureTextEntry
+        />
+
+        <TouchableOpacity
+          style={[styles.button, changingPassword && styles.buttonDisabled]}
+          onPress={handleChangePassword}
+          disabled={changingPassword}
+        >
+          <Text style={styles.buttonText}>
+            {changingPassword ? 'Changing...' : 'Change Password'}
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -141,6 +232,8 @@ const styles = StyleSheet.create({
   inputDisabled: { justifyContent: 'center', opacity: 0.7 },
   disabledText: { fontSize: 14, color: Colors.textGray },
   hint: { fontSize: 11, color: Colors.textGray, marginTop: -10, marginBottom: 20 },
+  divider: { height: 1, backgroundColor: Colors.border, marginVertical: 28 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: Colors.textDark, marginBottom: 16 },
   button: {
     backgroundColor: Colors.primary,
     borderRadius: 12,
