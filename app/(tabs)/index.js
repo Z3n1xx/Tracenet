@@ -54,9 +54,14 @@ export default function HomeScreen() {
           <Text style={styles.headerTitle}>TraceNet</Text>
           <Text style={styles.headerSub}>Welcome, {auth.currentUser?.displayName || 'User'}</Text>
         </View>
-        <TouchableOpacity style={styles.bellBtn}>
-          <Text style={styles.bellIcon}>🔔</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.bellBtn} onPress={() => router.push('/profile')}>
+            <Text style={styles.bellIcon}>👤</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.bellBtn}>
+            <Text style={styles.bellIcon}>🔔</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -90,7 +95,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionBtn, styles.actionBtnOutline]}
-            onPress={() => router.push('/(tabs)/report')}
+            onPress={() => router.push('/(tabs)/report?type=sighting')}
             activeOpacity={0.85}
           >
             <Text style={styles.actionIcon}>🧍</Text>
@@ -162,6 +167,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: '900', color: Colors.white, letterSpacing: 1 },
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  headerActions: { flexDirection: 'row', gap: 10 },
   bellBtn: {
     width: 36,
     height: 36,

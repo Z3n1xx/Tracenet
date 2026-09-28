@@ -51,6 +51,9 @@ export default function CasesScreen() {
               onPress={() => router.push(`/case-status?id=${item.id}`)}
               activeOpacity={0.8}
             >
+              <Text style={styles.typeLabel}>
+                {item.type === 'sighting' ? '🟡 SIGHTING' : '🔴 MISSING'}
+              </Text>
               <View style={styles.cardTop}>
                 <Text style={styles.name}>{item.name}{item.age ? `, ${item.age}` : ''}</Text>
                 <View style={[styles.badge, { backgroundColor: statusStyle.bg }]}>
@@ -85,6 +88,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     elevation: 2,
   },
+  typeLabel: { fontSize: 10, fontWeight: '800', color: Colors.textGray, letterSpacing: 0.5, marginBottom: 4 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   name: { fontSize: 15, fontWeight: '700', color: Colors.textDark },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },

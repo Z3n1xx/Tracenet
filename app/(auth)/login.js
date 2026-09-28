@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, ScrollView,
+  StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 import Colors from '../../constants/colors';
 
@@ -21,6 +21,19 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  async function handleForgotPassword() {
+    if (!email) {
+      setError('Enter your email above first, then tap "Forgot password?"');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      Alert.alert('Check your email', `A password reset link has been sent to ${email.trim()}.`);
+    } catch (e) {
+      setError(AUTH_ERROR_MESSAGES[e.code] || 'Could not send reset email. Please try again.');
+    }
+  }
 
   async function handleLogin() {
     if (!email || !password) {
@@ -80,7 +93,7 @@ export default function LoginScreen() {
             secureTextEntry
           />
 
-          <TouchableOpacity style={styles.forgotRow}>
+          <TouchableOpacity style={styles.forgotRow} onPress={handleForgotPassword}>
             <Text style={styles.forgot}>Forgot password?</Text>
           </TouchableOpacity>
 

@@ -1,48 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { router } from 'expo-router';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../services/firebase';
 import Colors from '../../constants/colors';
 
-const SAMPLE_ALERTS = [
-  {
-    id: '1',
-    type: 'AI Match',
-    title: 'Possible match found — Juan Dela Cruz',
-    detail: 'AI detected 87% facial similarity between report #001 and a sighting near Carbon Market.',
-    time: '2 hours ago',
-    read: false,
-    severity: 'high',
-  },
-  {
-    id: '2',
-    type: 'New Report',
-    title: 'New missing person report submitted',
-    detail: 'Maria Santos, 16, last seen at SM City Cebu North Wing.',
-    time: '5 hours ago',
-    read: false,
-    severity: 'medium',
-  },
-  {
-    id: '3',
-    type: 'Police Update',
-    title: 'Carlos Reyes — status updated to FOUND',
-    detail: 'Officer Cruz confirmed recovery. Case #003 closed.',
-    time: 'Yesterday',
-    read: true,
-    severity: 'low',
-  },
-  {
-    id: '4',
-    type: 'Community',
-    title: 'New sighting reported near Colon Street',
-    detail: 'A community member reported a sighting matching Juan Dela Cruz near Colon and Osmena Blvd.',
-    time: 'Yesterday',
-    read: true,
-    severity: 'medium',
-  },
-];
+const STATUS_META = {
+  submitted: { type: 'New Report', severity: 'medium', verb: 'submitted a new report' },
+  verified: { type: 'Verified', severity: 'medium', verb: "'s report was verified by the barangay" },
+  forwarded: { type: 'Forwarded', severity: 'high', verb: "'s case was forwarded to CCPO" },
+  resolved: { type: 'Resolved', severity: 'low', verb: "'s case was resolved" },
+};
 
 const SEVERITY_COLORS = {
   high: Colors.danger,
@@ -51,17 +22,29 @@ const SEVERITY_COLORS = {
 };
 
 const TYPE_COLORS = {
-  'AI Match': '#7C3AED',
   'New Report': Colors.accent,
-  'Police Update': Colors.primary,
-  'Community': Colors.success,
+  'Verified': Colors.primary,
+  'Forwarded': '#7C3AED',
+  'Resolved': Colors.success,
 };
+
+function timeAgo(date) {
+  if (!date) return '';
+  const diffMs = Date.now() - date.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
 
 function AlertCard({ item, onPress }) {
   return (
     <TouchableOpacity
       style={[styles.card, !item.read && styles.cardUnread]}
-      onPress={() => onPress(item.id)}
+      onPress={() => onPress(item)}
       activeOpacity={0.8}
     >
       <View style={[styles.severityBar, { backgroundColor: SEVERITY_COLORS[item.severity] }]} />
@@ -81,20 +64,51 @@ function AlertCard({ item, onPress }) {
 }
 
 export default function AlertsScreen() {
-  const [alerts, setAlerts] = useState(SAMPLE_ALERTS);
+  const [reports, setReports] = useState([]);
+  const [readIds, setReadIds] = useState(new Set());
   const [filter, setFilter] = useState('All');
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, 'reports'),
+      (snap) => {
+        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        rows.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+        setReports(rows);
+      },
+      (error) => {
+        if (error.code !== 'permission-denied') console.warn('Alerts listener error:', error);
+      }
+    );
+    return unsubscribe;
+  }, []);
+
+  const alerts = reports.map((r) => {
+    const meta = STATUS_META[r.status] || STATUS_META.submitted;
+    return {
+      id: r.id,
+      reportId: r.id,
+      type: meta.type,
+      severity: meta.severity,
+      title: `${r.name}${meta.verb}`,
+      detail: `${r.location}${r.reportedByName ? ` • Reported by ${r.reportedByName}` : ''}`,
+      time: timeAgo(r.createdAt?.toDate?.()),
+      read: readIds.has(r.id),
+    };
+  });
 
   const unreadCount = alerts.filter((a) => !a.read).length;
 
-  function markRead(id) {
-    setAlerts((prev) => prev.map((a) => a.id === id ? { ...a, read: true } : a));
+  function markRead(item) {
+    setReadIds((prev) => new Set(prev).add(item.id));
+    router.push(`/case-status?id=${item.reportId}`);
   }
 
   function markAllRead() {
-    setAlerts((prev) => prev.map((a) => ({ ...a, read: true })));
+    setReadIds(new Set(alerts.map((a) => a.id)));
   }
 
-  const types = ['All', 'AI Match', 'New Report', 'Police Update', 'Community'];
+  const types = ['All', 'New Report', 'Verified', 'Forwarded', 'Resolved'];
   const filtered = filter === 'All' ? alerts : alerts.filter((a) => a.type === filter);
 
   return (

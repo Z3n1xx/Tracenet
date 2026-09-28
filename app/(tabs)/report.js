@@ -4,12 +4,15 @@ import {
   StyleSheet, ScrollView, Image, Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import * as Location from 'expo-location';
+import { router, useLocalSearchParams } from 'expo-router';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../services/firebase';
 import Colors from '../../constants/colors';
 
 export default function ReportScreen() {
+  const { type: typeParam } = useLocalSearchParams();
+  const isSighting = typeParam === 'sighting';
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [sex, setSex] = useState('Female');
@@ -17,6 +20,33 @@ export default function ReportScreen() {
   const [description, setDescription] = useState('');
   const [photo, setPhoto] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [locating, setLocating] = useState(false);
+
+  async function useCurrentLocation() {
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow location access in settings.');
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({});
+      const [place] = await Location.reverseGeocodeAsync({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+      if (place) {
+        const parts = [place.street, place.district || place.subregion, place.city].filter(Boolean);
+        setLocation(parts.join(', ') || 'Current location');
+      } else {
+        setLocation(`${position.coords.latitude.toFixed(5)}, ${position.coords.longitude.toFixed(5)}`);
+      }
+    } catch {
+      Alert.alert('Error', 'Could not get your current location. Please enter it manually.');
+    } finally {
+      setLocating(false);
+    }
+  }
 
   async function pickFromGallery() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -48,8 +78,13 @@ export default function ReportScreen() {
   }
 
   async function handleNext() {
-    if (!name || !location) {
-      Alert.alert('Missing fields', 'Please provide the name and last known location.');
+    if (!location || (!isSighting && !name)) {
+      Alert.alert(
+        'Missing fields',
+        isSighting
+          ? 'Please provide the location where the person was seen.'
+          : 'Please provide the name and last known location.'
+      );
       return;
     }
     setLoading(true);
@@ -57,7 +92,8 @@ export default function ReportScreen() {
       // Photo is kept locally only for now — Firebase Storage requires the
       // Blaze billing plan, which hasn't been enabled on this project yet.
       const docRef = await addDoc(collection(db, 'reports'), {
-        name,
+        type: isSighting ? 'sighting' : 'missing',
+        name: name || 'Unidentified person',
         age: age ? Number(age) : null,
         sex,
         location,
@@ -84,8 +120,12 @@ export default function ReportScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Text style={styles.backText}>‹</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Report Missing Person</Text>
-        <Text style={styles.stepLabel}>Step 1 of 3 — Person Details</Text>
+        <Text style={styles.headerTitle}>
+          {isSighting ? 'Report a Sighting' : 'Report Missing Person'}
+        </Text>
+        <Text style={styles.stepLabel}>
+          {isSighting ? 'Step 1 of 2 — Sighting Details' : 'Step 1 of 3 — Person Details'}
+        </Text>
         <View style={styles.progressTrack}>
           <View style={styles.progressFill} />
         </View>
@@ -110,8 +150,12 @@ export default function ReportScreen() {
               <View style={styles.uploadIcon}>
                 <Text style={styles.uploadIconText}>📷</Text>
               </View>
-              <Text style={styles.uploadTitle}>Upload Recent Photo</Text>
-              <Text style={styles.uploadSub}>Used for AI facial matching</Text>
+              <Text style={styles.uploadTitle}>
+                {isSighting ? 'Upload a Photo' : 'Upload Recent Photo'}
+              </Text>
+              <Text style={styles.uploadSub}>
+                {isSighting ? 'Helps verify the sighting' : 'Used for AI facial matching'}
+              </Text>
               <View style={styles.uploadBtns}>
                 <TouchableOpacity style={styles.uploadBtn} onPress={pickFromGallery}>
                   <Text style={styles.uploadBtnText}>Gallery</Text>
@@ -125,10 +169,12 @@ export default function ReportScreen() {
         </TouchableOpacity>
 
         {/* Name */}
-        <Text style={styles.label}>Full Name of Missing Person</Text>
+        <Text style={styles.label}>
+          {isSighting ? 'Name (if known)' : 'Full Name of Missing Person'}
+        </Text>
         <TextInput
           style={styles.input}
-          placeholder="Full name"
+          placeholder={isSighting ? 'Leave blank if unknown' : 'Full name'}
           placeholderTextColor={Colors.textGray}
           value={name}
           onChangeText={setName}
@@ -164,17 +210,28 @@ export default function ReportScreen() {
         </View>
 
         {/* Location */}
-        <Text style={styles.label}>Last Known Location</Text>
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>
+            {isSighting ? 'Where Was the Person Seen' : 'Last Known Location'}
+          </Text>
+          <TouchableOpacity onPress={useCurrentLocation} disabled={locating}>
+            <Text style={styles.useLocationText}>
+              {locating ? 'Locating...' : '📍 Use current location'}
+            </Text>
+          </TouchableOpacity>
+        </View>
         <TextInput
           style={styles.input}
-          placeholder="📍 Brgy., Street, Cebu City"
+          placeholder="Brgy., Street, Cebu City"
           placeholderTextColor={Colors.textGray}
           value={location}
           onChangeText={setLocation}
         />
 
         {/* Description */}
-        <Text style={styles.label}>Clothing Description</Text>
+        <Text style={styles.label}>
+          {isSighting ? 'Description of Person Seen' : 'Clothing Description'}
+        </Text>
         <TextInput
           style={[styles.input, styles.textarea]}
           placeholder="White blouse, blue jeans, wearing eyeglasses..."
@@ -192,7 +249,7 @@ export default function ReportScreen() {
           disabled={loading}
         >
           <Text style={styles.nextBtnText}>
-            {loading ? 'Submitting...' : 'Next: Last Seen Details →'}
+            {loading ? 'Submitting...' : isSighting ? 'Submit Sighting Report →' : 'Submit Report →'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -262,6 +319,13 @@ const styles = StyleSheet.create({
   removePhoto: { marginTop: 10 },
   removePhotoText: { color: Colors.danger, fontSize: 13, fontWeight: '600' },
   label: { fontSize: 13, fontWeight: '600', color: Colors.textDark, marginBottom: 6 },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  useLocationText: { fontSize: 12, color: Colors.primary, fontWeight: '700' },
   input: {
     backgroundColor: Colors.white,
     borderWidth: 1,

@@ -11,6 +11,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="case-status" />
         <Stack.Screen name="match-alert" />
+        <Stack.Screen name="profile" />
       </Stack>
     </>
   );
