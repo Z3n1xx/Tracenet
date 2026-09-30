@@ -1,5 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -22,6 +24,30 @@ export async function requestNotificationPermission() {
   if (existing === 'granted') return true;
   const { status } = await Notifications.requestPermissionsAsync();
   return status === 'granted';
+}
+
+// Registers this device for background push (works while the app is closed)
+// by saving its raw FCM token to the user's Firestore doc. A separate
+// server-side Cloud Function (outside mobile scope) reads this token to
+// actually send the push when a report's status changes.
+export async function registerPushToken() {
+  if (Platform.OS === 'web') return;
+  const uid = auth.currentUser?.uid;
+  if (!uid) return;
+
+  const granted = await requestNotificationPermission();
+  if (!granted) return;
+
+  try {
+    const { data: pushToken } = await Notifications.getDevicePushTokenAsync();
+    await setDoc(
+      doc(db, 'users', uid),
+      { pushToken, pushTokenPlatform: Platform.OS },
+      { merge: true }
+    );
+  } catch (e) {
+    console.warn('Failed to register push token:', e);
+  }
 }
 
 export async function notifyStatusChange(name, status) {

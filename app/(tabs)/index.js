@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../../services/firebase';
-import { notifyStatusChange, requestNotificationPermission } from '../../services/notifications';
+import { notifyStatusChange, registerPushToken } from '../../services/notifications';
 import Colors from '../../constants/colors';
 
 export default function HomeScreen() {
@@ -12,7 +12,7 @@ export default function HomeScreen() {
   const previousStatuses = useRef(null);
 
   useEffect(() => {
-    requestNotificationPermission();
+    registerPushToken();
   }, []);
 
   useEffect(() => {

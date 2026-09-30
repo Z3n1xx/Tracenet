@@ -11,6 +11,7 @@
     },
     "android": {
       "package": "com.tracenet.app",
+      "googleServicesFile": "./google-services.json",
       "compileSdkVersion": 35,
       "targetSdkVersion": 34,
       "minSdkVersion": 24,
