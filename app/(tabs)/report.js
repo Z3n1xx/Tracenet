@@ -8,6 +8,7 @@ import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../services/firebase';
+import { uploadPhoto } from '../../services/cloudinary';
 import Colors from '../../constants/colors';
 
 export default function ReportScreen() {
@@ -89,8 +90,18 @@ export default function ReportScreen() {
     }
     setLoading(true);
     try {
-      // Photo is kept locally only for now — Firebase Storage requires the
-      // Blaze billing plan, which hasn't been enabled on this project yet.
+      let photoUrl = null;
+      if (photo) {
+        try {
+          photoUrl = await uploadPhoto(photo);
+        } catch {
+          Alert.alert(
+            'Photo upload failed',
+            'Your report will be submitted without the photo. You can try again later.'
+          );
+        }
+      }
+
       const docRef = await addDoc(collection(db, 'reports'), {
         type: isSighting ? 'sighting' : 'missing',
         name: name || 'Unidentified person',
@@ -98,7 +109,7 @@ export default function ReportScreen() {
         sex,
         location,
         description,
-        photoUrl: null,
+        photoUrl,
         reportedByUid: auth.currentUser.uid,
         reportedByName: auth.currentUser.displayName || 'Unknown',
         status: 'submitted',

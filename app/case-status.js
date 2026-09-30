@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -136,6 +136,9 @@ export default function CaseStatusScreen() {
         {/* Case Details */}
         <Text style={styles.sectionTitle}>Case Details</Text>
         <View style={styles.detailsCard}>
+          {caseData.photoUrl && (
+            <Image source={{ uri: caseData.photoUrl }} style={styles.photo} />
+          )}
           <Text style={styles.detailLine}>
             <Text style={styles.detailLineLabel}>Name: </Text>
             {caseData.name}{caseData.age ? `, ${caseData.age}` : ''}{caseData.sex ? `, ${caseData.sex}` : ''}
@@ -219,6 +222,13 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     elevation: 2,
+  },
+  photo: {
+    width: 140,
+    height: 175,
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginBottom: 16,
   },
   detailLine: { fontSize: 13, color: Colors.textDark, marginBottom: 10, lineHeight: 19 },
   detailLineLabel: { fontWeight: '700', color: Colors.textGray },
