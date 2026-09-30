@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Map, Camera, Marker } from '@maplibre/maplibre-react-native';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../services/firebase';
 import Colors from '../../constants/colors';
 
 // Cebu City center — MapLibre uses [longitude, latitude] order
@@ -27,38 +29,31 @@ const OSM_STYLE = {
   ],
 };
 
-const SAMPLE_PINS = [
-  {
-    id: '1',
-    type: 'missing',
-    name: 'Juan Dela Cruz',
-    location: 'Colon Street',
-    latitude: 10.2944,
-    longitude: 123.9029,
-  },
-  {
-    id: '2',
-    type: 'missing',
-    name: 'Maria Santos',
-    location: 'SM City Cebu',
-    latitude: 10.3186,
-    longitude: 123.9054,
-  },
-  {
-    id: '3',
-    type: 'sighting',
-    name: 'Sighting: Juan Dela Cruz',
-    location: 'Carbon Market',
-    latitude: 10.2968,
-    longitude: 123.8989,
-  },
-];
-
 export default function MapScreen() {
   const [filter, setFilter] = useState('all');
   const [selectedPin, setSelectedPin] = useState(null);
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const pins = SAMPLE_PINS.filter((p) => {
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, 'reports'),
+      (snap) => {
+        const withCoords = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .filter((r) => typeof r.latitude === 'number' && typeof r.longitude === 'number');
+        setReports(withCoords);
+        setLoading(false);
+      },
+      (error) => {
+        setLoading(false);
+        if (error.code !== 'permission-denied') console.warn('Map listener error:', error);
+      }
+    );
+    return unsubscribe;
+  }, []);
+
+  const pins = reports.filter((p) => {
     if (filter === 'all') return true;
     return p.type === filter;
   });
@@ -104,6 +99,21 @@ export default function MapScreen() {
             </Marker>
           ))}
         </Map>
+
+        {loading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator color={Colors.primary} size="large" />
+          </View>
+        )}
+
+        {!loading && pins.length === 0 && (
+          <View style={styles.emptyOverlay}>
+            <Text style={styles.emptyText}>
+              No {filter === 'all' ? '' : filter + ' '}reports with a location yet.{'\n'}
+              Use "Use current location" when submitting a report.
+            </Text>
+          </View>
+        )}
 
         {selectedPin && (
           <View style={styles.calloutCard}>
@@ -165,6 +175,22 @@ const styles = StyleSheet.create({
   filterTextActive: { color: Colors.white },
   mapWrap: { flex: 1 },
   map: { flex: 1 },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyOverlay: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 12,
+    padding: 16,
+    elevation: 3,
+  },
+  emptyText: { fontSize: 13, color: Colors.textGray, textAlign: 'center', lineHeight: 19 },
   pin: {
     width: 28,
     height: 28,

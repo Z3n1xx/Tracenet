@@ -18,6 +18,7 @@ export default function ReportScreen() {
   const [age, setAge] = useState('');
   const [sex, setSex] = useState('Female');
   const [location, setLocation] = useState('');
+  const [coords, setCoords] = useState(null);
   const [description, setDescription] = useState('');
   const [photo, setPhoto] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -32,6 +33,10 @@ export default function ReportScreen() {
         return;
       }
       const position = await Location.getCurrentPositionAsync({});
+      setCoords({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
       const [place] = await Location.reverseGeocodeAsync({
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
@@ -108,6 +113,8 @@ export default function ReportScreen() {
         age: age ? Number(age) : null,
         sex,
         location,
+        latitude: coords?.latitude ?? null,
+        longitude: coords?.longitude ?? null,
         description,
         photoUrl,
         reportedByUid: auth.currentUser.uid,
@@ -236,7 +243,7 @@ export default function ReportScreen() {
           placeholder="Brgy., Street, Cebu City"
           placeholderTextColor={Colors.textGray}
           value={location}
-          onChangeText={setLocation}
+          onChangeText={(v) => { setLocation(v); setCoords(null); }}
         />
 
         {/* Description */}
