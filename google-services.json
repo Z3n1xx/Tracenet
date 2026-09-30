@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "544387003898",
+    "project_id": "tracenet-cebu",
+    "storage_bucket": "tracenet-cebu.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:544387003898:android:cff7812f1b5b4995c7e043",
+        "android_client_info": {
+          "package_name": "com.tracenet.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA6eubgmu6io6n4XLMTil2WVMz7OtkN40Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
