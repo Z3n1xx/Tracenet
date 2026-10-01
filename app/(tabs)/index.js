@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
@@ -44,7 +44,37 @@ export default function HomeScreen() {
     return unsubscribe;
   }, []);
 
-  const matchingCase = cases.find((c) => c.status === 'verified' || c.status === 'forwarded');
+  const [matchesAsMissing, setMatchesAsMissing] = useState([]);
+  const [matchesAsSighting, setMatchesAsSighting] = useState([]);
+
+  useEffect(() => {
+    const reportIds = cases.map((c) => c.id).slice(0, 30);
+    if (reportIds.length === 0) {
+      setMatchesAsMissing([]);
+      setMatchesAsSighting([]);
+      return;
+    }
+    const unsubA = onSnapshot(
+      query(collection(db, 'matches'), where('missingReportId', 'in', reportIds)),
+      (snap) => setMatchesAsMissing(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      (error) => { if (error.code !== 'permission-denied') console.warn('Matches listener error:', error); }
+    );
+    const unsubB = onSnapshot(
+      query(collection(db, 'matches'), where('sightingReportId', 'in', reportIds)),
+      (snap) => setMatchesAsSighting(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      (error) => { if (error.code !== 'permission-denied') console.warn('Matches listener error:', error); }
+    );
+    return () => { unsubA(); unsubB(); };
+  }, [cases]);
+
+  const pendingMatches = useMemo(() => {
+    const byId = new Map();
+    for (const m of [...matchesAsMissing, ...matchesAsSighting]) {
+      if (m.status === 'pending') byId.set(m.id, m);
+    }
+    return Array.from(byId.values());
+  }, [matchesAsMissing, matchesAsSighting]);
+
   const verifiedNotifications = cases.filter((c) => c.status && c.status !== 'submitted');
 
   return (
@@ -66,18 +96,18 @@ export default function HomeScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Potential Match Banner */}
-        {matchingCase && (
+        {pendingMatches.length > 0 && (
           <TouchableOpacity
             style={styles.matchBanner}
-            onPress={() => router.push(`/case-status?id=${matchingCase.id}`)}
+            onPress={() => router.push(`/match-alert?id=${pendingMatches[0].id}`)}
             activeOpacity={0.85}
           >
             <Text style={styles.matchBannerIcon}>⚠️</Text>
             <View style={styles.matchBannerText}>
-              <Text style={styles.matchBannerTitle}>1 potential match found</Text>
-              <Text style={styles.matchBannerSub}>
-                Case #{matchingCase.id.slice(0, 6)} — Review now
+              <Text style={styles.matchBannerTitle}>
+                {pendingMatches.length} potential match{pendingMatches.length > 1 ? 'es' : ''} found
               </Text>
+              <Text style={styles.matchBannerSub}>AI facial match — Review now</Text>
             </View>
           </TouchableOpacity>
         )}

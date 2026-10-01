@@ -1,36 +1,109 @@
-import { View, Text, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
-import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Alert, ActivityIndicator } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { doc, onSnapshot, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '../services/firebase';
 import Colors from '../constants/colors';
 
-const MATCH_DATA = {
-  confidence: 87,
-  missingPerson: {
-    name: 'Maria Santos',
-    barangay: 'Brgy. Labangon',
-    photo: null,
-  },
-  foundPerson: {
-    label: 'Unidentified F.',
-    barangay: 'Brgy. Mabolo',
-    photo: null,
-  },
-};
-
 export default function MatchAlertScreen() {
-  const { confidence, missingPerson, foundPerson } = MATCH_DATA;
-  const fillWidth = `${confidence}%`;
+  const { id } = useLocalSearchParams();
+  const [match, setMatch] = useState(null);
+  const [missingReport, setMissingReport] = useState(null);
+  const [sightingReport, setSightingReport] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [acting, setActing] = useState(false);
 
-  function handleConfirm() {
-    Alert.alert(
-      'Match Confirmed',
-      'Confirmation notifies family and CCPO.',
-      [{ text: 'OK', onPress: () => router.replace('/case-status') }]
+  useEffect(() => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    const unsubscribe = onSnapshot(
+      doc(db, 'matches', id),
+      async (snap) => {
+        if (!snap.exists()) {
+          setMatch(null);
+          setLoading(false);
+          return;
+        }
+        const data = { id: snap.id, ...snap.data() };
+        setMatch(data);
+        const [missingSnap, sightingSnap] = await Promise.all([
+          getDoc(doc(db, 'reports', data.missingReportId)),
+          getDoc(doc(db, 'reports', data.sightingReportId)),
+        ]);
+        setMissingReport(missingSnap.exists() ? { id: missingSnap.id, ...missingSnap.data() } : null);
+        setSightingReport(sightingSnap.exists() ? { id: sightingSnap.id, ...sightingSnap.data() } : null);
+        setLoading(false);
+      },
+      (error) => {
+        setLoading(false);
+        if (error.code !== 'permission-denied') console.warn('Match listener error:', error);
+      }
+    );
+    return unsubscribe;
+  }, [id]);
+
+  async function handleConfirm() {
+    setActing(true);
+    try {
+      await updateDoc(doc(db, 'matches', match.id), {
+        status: 'confirmed',
+        reviewedAt: serverTimestamp(),
+        reviewedBy: auth.currentUser?.uid || null,
+      });
+      Alert.alert(
+        'Match Confirmed',
+        'Confirmation notifies family and CCPO.',
+        [{ text: 'OK', onPress: () => router.replace(`/case-status?id=${match.missingReportId}`) }]
+      );
+    } catch {
+      Alert.alert('Error', 'Failed to confirm match. Please try again.');
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function handleReview() {
+    setActing(true);
+    try {
+      await updateDoc(doc(db, 'matches', match.id), {
+        status: 'needs_review',
+        reviewedAt: serverTimestamp(),
+        reviewedBy: auth.currentUser?.uid || null,
+      });
+      Alert.alert('Sent for Review', 'This match has been flagged for manual review.', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch {
+      Alert.alert('Error', 'Failed to flag match. Please try again.');
+    } finally {
+      setActing(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator color={Colors.primary} size="large" />
+      </View>
     );
   }
 
-  function handleReview() {
-    Alert.alert('Sent for Review', 'This match has been flagged for manual review.');
+  if (!match || !missingReport || !sightingReport) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.notFound}>Match not found.</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 12 }}>
+          <Text style={{ color: Colors.primary, fontWeight: '700' }}>‹ Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
+
+  const confidence = Math.round(match.confidence ?? 0);
+  const fillWidth = `${confidence}%`;
+  const isPending = match.status === 'pending';
 
   return (
     <View style={styles.container}>
@@ -46,28 +119,28 @@ export default function MatchAlertScreen() {
           <View style={styles.photoRow}>
             <View style={styles.photoCard}>
               <View style={styles.photoBox}>
-                {missingPerson.photo
-                  ? <Image source={{ uri: missingPerson.photo }} style={styles.photo} />
+                {missingReport.photoUrl
+                  ? <Image source={{ uri: missingReport.photoUrl }} style={styles.photo} />
                   : <Text style={styles.photoInitial}>👤</Text>
                 }
               </View>
               <Text style={styles.photoTag}>MISSING</Text>
-              <Text style={styles.photoName}>{missingPerson.name}</Text>
-              <Text style={styles.photoSub}>{missingPerson.barangay}</Text>
+              <Text style={styles.photoName}>{missingReport.name}</Text>
+              <Text style={styles.photoSub}>{missingReport.location}</Text>
             </View>
 
             <Text style={styles.arrow}>↔</Text>
 
             <View style={styles.photoCard}>
               <View style={[styles.photoBox, styles.photoBoxFound]}>
-                {foundPerson.photo
-                  ? <Image source={{ uri: foundPerson.photo }} style={styles.photo} />
+                {sightingReport.photoUrl
+                  ? <Image source={{ uri: sightingReport.photoUrl }} style={styles.photo} />
                   : <Text style={styles.photoInitial}>👤</Text>
                 }
               </View>
               <Text style={[styles.photoTag, styles.photoTagFound]}>FOUND</Text>
-              <Text style={styles.photoName}>{foundPerson.label}</Text>
-              <Text style={styles.photoSub}>{foundPerson.barangay}</Text>
+              <Text style={styles.photoName}>{sightingReport.name}</Text>
+              <Text style={styles.photoSub}>{sightingReport.location}</Text>
             </View>
           </View>
 
@@ -79,17 +152,32 @@ export default function MatchAlertScreen() {
           </View>
 
           <View style={styles.actions}>
-            <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={[styles.confirmBtn, (acting || !isPending) && styles.btnDisabled]}
+              onPress={handleConfirm}
+              activeOpacity={0.8}
+              disabled={acting || !isPending}
+            >
               <Text style={styles.confirmBtnText}>✓ Confirm</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.reviewBtn} onPress={handleReview} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={[styles.reviewBtn, (acting || !isPending) && styles.btnDisabled]}
+              onPress={handleReview}
+              activeOpacity={0.8}
+              disabled={acting || !isPending}
+            >
               <Text style={styles.reviewBtnText}>🔍 Review</Text>
             </TouchableOpacity>
           </View>
+
+          {!isPending && (
+            <Text style={styles.statusNote}>
+              Status: {match.status === 'confirmed' ? 'Confirmed' : 'Flagged for review'}
+            </Text>
+          )}
         </View>
 
         <Text style={styles.footerNote}>
-          Text description match: ☑ Age ☑ Gender ☑ Location{'\n'}
           Confirmation notifies family and CCPO.
         </Text>
       </View>
@@ -99,6 +187,8 @@ export default function MatchAlertScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  centered: { alignItems: 'center', justifyContent: 'center' },
+  notFound: { fontSize: 15, color: Colors.textGray },
   header: {
     backgroundColor: Colors.primary,
     paddingTop: 52,
@@ -177,5 +267,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reviewBtnText: { color: Colors.textGray, fontSize: 14, fontWeight: '700' },
+  btnDisabled: { opacity: 0.5 },
+  statusNote: { fontSize: 12, color: Colors.textGray, textAlign: 'center', marginTop: 10, fontWeight: '600' },
   footerNote: { fontSize: 11, color: Colors.textGray, textAlign: 'center', lineHeight: 17 },
 });
