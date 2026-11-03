@@ -18,7 +18,9 @@ const AUTH_ERROR_MESSAGES = {
 };
 
 export default function RegisterScreen() {
-  const [name, setName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [middleName, setMiddleName] = useState('');
   const [email, setEmail] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [password, setPassword] = useState('');
@@ -27,7 +29,7 @@ export default function RegisterScreen() {
   const [error, setError] = useState('');
 
   async function handleNext() {
-    if (!name || !email || !contactNumber || !password || !confirmPassword) {
+    if (!lastName || !firstName || !email || !contactNumber || !password || !confirmPassword) {
       setError('Please fill in all fields.');
       return;
     }
@@ -42,10 +44,14 @@ export default function RegisterScreen() {
     setLoading(true);
     setError('');
     try {
+      const name = [firstName, middleName, lastName].filter(Boolean).join(' ');
       const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
       await updateProfile(credential.user, { displayName: name });
       await setDoc(doc(db, 'users', credential.user.uid), {
         name,
+        lastName,
+        firstName,
+        middleName,
         email: email.trim(),
         contactNumber,
         role: ROLE,
@@ -76,13 +82,31 @@ export default function RegisterScreen() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Text style={styles.label}>Full Name</Text>
+        <Text style={styles.label}>Last Name</Text>
         <TextInput
           style={styles.input}
-          placeholder="Juan dela Cruz"
+          placeholder="Dela Cruz"
           placeholderTextColor={Colors.textGray}
-          value={name}
-          onChangeText={setName}
+          value={lastName}
+          onChangeText={setLastName}
+        />
+
+        <Text style={styles.label}>First Name</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Juan"
+          placeholderTextColor={Colors.textGray}
+          value={firstName}
+          onChangeText={setFirstName}
+        />
+
+        <Text style={styles.label}>Middle Name (optional)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Santos"
+          placeholderTextColor={Colors.textGray}
+          value={middleName}
+          onChangeText={setMiddleName}
         />
 
         <Text style={styles.label}>Email Address</Text>
