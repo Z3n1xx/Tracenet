@@ -60,7 +60,7 @@ export default function ForgotPasswordScreen() {
             <Text style={styles.successText}>
               A password reset link has been sent to{'\n'}
               <Text style={styles.successEmail}>{email.trim()}</Text>.{'\n'}
-              Open the email, then come back here and tap "Enter Code" to finish resetting your password in the app.
+              Open the email, long-press the reset link and choose "Copy Link", then come back here and tap "Enter Code" to paste it and finish resetting your password in the app.
             </Text>
             <TouchableOpacity
               style={styles.button}

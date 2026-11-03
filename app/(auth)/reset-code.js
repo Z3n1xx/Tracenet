@@ -87,7 +87,7 @@ export default function ResetCodeScreen() {
         ) : (
           <>
             <Text style={styles.intro}>
-              Open the email we sent you and copy the reset link or code, then paste it below along with your new password.
+              Open the email, long-press the reset link and choose "Copy Link" (don't tap it), then paste it below along with your new password.
             </Text>
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -95,7 +95,7 @@ export default function ResetCodeScreen() {
             <Text style={styles.label}>Reset Code or Link</Text>
             <TextInput
               style={styles.input}
-              placeholder="Paste the code or link from your email"
+              placeholder="Paste the copied link here"
               placeholderTextColor={Colors.textGray}
               value={code}
               onChangeText={setCode}
