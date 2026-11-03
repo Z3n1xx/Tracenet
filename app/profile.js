@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
+  StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { signOut, updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import Colors from '../constants/colors';
@@ -98,6 +98,17 @@ export default function ProfileScreen() {
     } finally {
       setChangingPassword(false);
     }
+  }
+
+  function handleLogout() {
+    Alert.alert('Log Out', 'Are you sure you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Log Out',
+        style: 'destructive',
+        onPress: () => signOut(auth).then(() => router.replace('/')),
+      },
+    ]);
   }
 
   if (loading) {
@@ -204,6 +215,12 @@ export default function ProfileScreen() {
             {changingPassword ? 'Changing...' : 'Change Password'}
           </Text>
         </TouchableOpacity>
+
+        <View style={styles.divider} />
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Log Out</Text>
+        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -248,4 +265,12 @@ const styles = StyleSheet.create({
   buttonText: { color: Colors.white, fontSize: 16, fontWeight: '700' },
   error: { color: Colors.danger, fontSize: 13, marginBottom: 12 },
   saved: { color: Colors.success, fontSize: 13, marginBottom: 12, fontWeight: '600' },
+  logoutButton: {
+    borderWidth: 1.5,
+    borderColor: Colors.danger,
+    borderRadius: 12,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  logoutButtonText: { color: Colors.danger, fontSize: 16, fontWeight: '700' },
 });

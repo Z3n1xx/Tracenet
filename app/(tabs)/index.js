@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { signOut } from 'firebase/auth';
 import { auth, db } from '../../services/firebase';
 import { notifyStatusChange, registerPushToken } from '../../services/notifications';
 import Colors from '../../constants/colors';
@@ -172,13 +171,6 @@ export default function HomeScreen() {
             </View>
           </View>
         ))}
-
-        <TouchableOpacity
-          style={styles.demoLink}
-          onPress={() => signOut(auth).then(() => router.replace('/'))}
-        >
-          <Text style={[styles.demoLinkText, { color: Colors.danger }]}>Log Out</Text>
-        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -269,6 +261,4 @@ const styles = StyleSheet.create({
   notifContent: { flex: 1 },
   notifText: { fontSize: 13, color: Colors.textDark, fontWeight: '500' },
   notifTime: { fontSize: 11, color: Colors.textGray, marginTop: 3 },
-  demoLink: { alignItems: 'center', marginTop: 24 },
-  demoLinkText: { fontSize: 12, color: Colors.textGray, fontWeight: '600' },
 });
