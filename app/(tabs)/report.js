@@ -99,7 +99,8 @@ export default function ReportScreen() {
       if (photo) {
         try {
           photoUrl = await uploadPhoto(photo);
-        } catch {
+        } catch (e) {
+          console.warn('Photo upload failed:', e.message);
           Alert.alert(
             'Photo upload failed',
             'Your report will be submitted without the photo. You can try again later.'
