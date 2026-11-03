@@ -130,14 +130,6 @@ export default function RegisterScreen() {
           keyboardType="phone-pad"
         />
 
-        <Text style={styles.label}>Role</Text>
-        <View style={styles.roleSelector}>
-          <Text style={styles.roleSelectorText}>{ROLE}</Text>
-        </View>
-        <Text style={styles.roleHint}>
-          Barangay officials and police officers use a separate portal.
-        </Text>
-
         <Text style={styles.label}>Password</Text>
         <TextInput
           style={styles.input}
@@ -208,15 +200,6 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     backgroundColor: Colors.background,
   },
-  roleSelector: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 10,
-    padding: 13,
-    backgroundColor: Colors.background,
-  },
-  roleSelectorText: { fontSize: 14, color: Colors.textDark },
-  roleHint: { fontSize: 11, color: Colors.textGray, marginTop: 6, marginBottom: 14 },
   button: {
     backgroundColor: Colors.primary,
     borderRadius: 12,
