@@ -9,7 +9,7 @@ import { db } from '../../services/firebase';
 import Colors from '../../constants/colors';
 
 const STATUS_META = {
-  submitted: { type: 'New Report', severity: 'medium', verb: 'submitted a new report' },
+  submitted: { type: 'New Report', severity: 'medium', verb: ' submitted a new report' },
   verified: { type: 'Verified', severity: 'medium', verb: "'s report was verified by the barangay" },
   forwarded: { type: 'Forwarded', severity: 'high', verb: "'s case was forwarded to CCPO" },
   resolved: { type: 'Resolved', severity: 'low', verb: "'s case was resolved" },
