@@ -13,6 +13,10 @@ import Colors from '../../constants/colors';
 
 export default function ReportScreen() {
   const { type: typeParam } = useLocalSearchParams();
+  return <ReportForm key={typeParam || 'missing'} typeParam={typeParam} />;
+}
+
+function ReportForm({ typeParam }) {
   const isSighting = typeParam === 'sighting';
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
@@ -125,6 +129,7 @@ export default function ReportScreen() {
         createdAt: serverTimestamp(),
       });
 
+      router.back();
       router.push(`/case-status?id=${docRef.id}`);
     } catch (e) {
       Alert.alert('Error', 'Failed to submit report. Please try again.');

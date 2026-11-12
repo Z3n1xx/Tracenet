@@ -20,6 +20,8 @@ export default function ProfileScreen() {
   const [name, setName] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [email, setEmail] = useState('');
+  const [originalName, setOriginalName] = useState('');
+  const [originalContactNumber, setOriginalContactNumber] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -41,6 +43,8 @@ export default function ProfileScreen() {
         const data = snap.data();
         setName(data.name || '');
         setContactNumber(data.contactNumber || '');
+        setOriginalName(data.name || '');
+        setOriginalContactNumber(data.contactNumber || '');
         setEmail(data.email || auth.currentUser.email || '');
       } else {
         setEmail(auth.currentUser.email || '');
@@ -54,6 +58,10 @@ export default function ProfileScreen() {
       setError('Name cannot be empty.');
       return;
     }
+    if (name === originalName && contactNumber === originalContactNumber) {
+      setError('No changes to save.');
+      return;
+    }
     setSaving(true);
     setError('');
     setSaved(false);
@@ -61,6 +69,8 @@ export default function ProfileScreen() {
       const uid = auth.currentUser.uid;
       await updateDoc(doc(db, 'users', uid), { name, contactNumber });
       await updateProfile(auth.currentUser, { displayName: name });
+      setOriginalName(name);
+      setOriginalContactNumber(contactNumber);
       setSaved(true);
     } catch {
       setError('Failed to save changes. Please try again.');
