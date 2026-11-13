@@ -7,8 +7,10 @@ import { router } from 'expo-router';
 import { signOut, updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
+import { uploadPhoto } from '../services/cloudinary';
 import Colors from '../constants/colors';
 import PasswordInput from '../components/PasswordInput';
+import AvatarPicker from '../components/AvatarPicker';
 
 const PASSWORD_ERROR_MESSAGES = {
   'auth/invalid-credential': 'Current password is incorrect.',
@@ -18,11 +20,15 @@ const PASSWORD_ERROR_MESSAGES = {
 };
 
 export default function ProfileScreen() {
+  const [photo, setPhoto] = useState(null);
   const [name, setName] = useState('');
+  const [age, setAge] = useState('');
+  const [birthday, setBirthday] = useState('');
+  const [gender, setGender] = useState('Female');
+  const [address, setAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [email, setEmail] = useState('');
-  const [originalName, setOriginalName] = useState('');
-  const [originalContactNumber, setOriginalContactNumber] = useState('');
+  const [original, setOriginal] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -42,11 +48,23 @@ export default function ProfileScreen() {
       const snap = await getDoc(doc(db, 'users', uid));
       if (snap.exists()) {
         const data = snap.data();
+        setPhoto(data.photoUrl || null);
         setName(data.name || '');
+        setAge(data.age ? String(data.age) : '');
+        setBirthday(data.birthday || '');
+        setGender(data.gender || 'Female');
+        setAddress(data.address || '');
         setContactNumber(data.contactNumber || '');
-        setOriginalName(data.name || '');
-        setOriginalContactNumber(data.contactNumber || '');
         setEmail(data.email || auth.currentUser.email || '');
+        setOriginal({
+          photoUrl: data.photoUrl || null,
+          name: data.name || '',
+          age: data.age ? String(data.age) : '',
+          birthday: data.birthday || '',
+          gender: data.gender || 'Female',
+          address: data.address || '',
+          contactNumber: data.contactNumber || '',
+        });
       } else {
         setEmail(auth.currentUser.email || '');
       }
@@ -55,11 +73,19 @@ export default function ProfileScreen() {
   }, []);
 
   async function handleSave() {
-    if (!name) {
-      setError('Name cannot be empty.');
+    if (!name || !age || !birthday || !address || !contactNumber) {
+      setError('Please fill in all fields.');
       return;
     }
-    if (name === originalName && contactNumber === originalContactNumber) {
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(birthday)) {
+      setError('Birthday must be in MM/DD/YYYY format.');
+      return;
+    }
+    const unchanged = photo === original.photoUrl && name === original.name
+      && age === original.age && birthday === original.birthday
+      && gender === original.gender && address === original.address
+      && contactNumber === original.contactNumber;
+    if (unchanged) {
       setError('No changes to save.');
       return;
     }
@@ -68,10 +94,16 @@ export default function ProfileScreen() {
     setSaved(false);
     try {
       const uid = auth.currentUser.uid;
-      await updateDoc(doc(db, 'users', uid), { name, contactNumber });
-      await updateProfile(auth.currentUser, { displayName: name });
-      setOriginalName(name);
-      setOriginalContactNumber(contactNumber);
+      let photoUrl = original.photoUrl || null;
+      if (photo && photo !== original.photoUrl) {
+        photoUrl = await uploadPhoto(photo);
+      }
+      await updateDoc(doc(db, 'users', uid), {
+        name, age: Number(age), birthday, gender, address, contactNumber, photoUrl,
+      });
+      await updateProfile(auth.currentUser, { displayName: name, photoURL: photoUrl || undefined });
+      setPhoto(photoUrl);
+      setOriginal({ photoUrl, name, age, birthday, gender, address, contactNumber });
       setSaved(true);
     } catch {
       setError('Failed to save changes. Please try again.');
@@ -152,6 +184,8 @@ export default function ProfileScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {saved ? <Text style={styles.saved}>Profile updated.</Text> : null}
 
+        <AvatarPicker uri={photo} onChange={(v) => { setPhoto(v); setSaved(false); }} />
+
         <Text style={styles.label}>Full Name</Text>
         <TextInput
           style={styles.input}
@@ -159,6 +193,53 @@ export default function ProfileScreen() {
           placeholderTextColor={Colors.textGray}
           value={name}
           onChangeText={(v) => { setName(v); setSaved(false); }}
+        />
+
+        <View style={styles.rowFields}>
+          <View style={styles.rowFieldHalf}>
+            <Text style={styles.label}>Age</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="34"
+              placeholderTextColor={Colors.textGray}
+              value={age}
+              onChangeText={(v) => { setAge(v); setSaved(false); }}
+              keyboardType="number-pad"
+            />
+          </View>
+          <View style={styles.rowFieldHalf}>
+            <Text style={styles.label}>Gender</Text>
+            <View style={styles.sexRow}>
+              {['Male', 'Female'].map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.sexBtn, gender === s && styles.sexBtnActive]}
+                  onPress={() => { setGender(s); setSaved(false); }}
+                >
+                  <Text style={[styles.sexBtnText, gender === s && styles.sexBtnTextActive]}>{s}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        <Text style={styles.label}>Birthday</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="MM/DD/YYYY"
+          placeholderTextColor={Colors.textGray}
+          value={birthday}
+          onChangeText={(v) => { setBirthday(v); setSaved(false); }}
+          keyboardType="number-pad"
+        />
+
+        <Text style={styles.label}>Address</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Brgy., Street, Cebu City"
+          placeholderTextColor={Colors.textGray}
+          value={address}
+          onChangeText={(v) => { setAddress(v); setSaved(false); }}
         />
 
         <Text style={styles.label}>Contact Number</Text>
@@ -277,6 +358,21 @@ const styles = StyleSheet.create({
   buttonText: { color: Colors.white, fontSize: 16, fontWeight: '700' },
   error: { color: Colors.danger, fontSize: 13, marginBottom: 12 },
   saved: { color: Colors.success, fontSize: 13, marginBottom: 12, fontWeight: '600' },
+  rowFields: { flexDirection: 'row', gap: 12 },
+  rowFieldHalf: { flex: 1 },
+  sexRow: { flexDirection: 'row', gap: 8 },
+  sexBtn: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingVertical: 13,
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+  },
+  sexBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  sexBtnText: { fontSize: 14, fontWeight: '600', color: Colors.textGray },
+  sexBtnTextActive: { color: Colors.primary },
   logoutButton: {
     borderWidth: 1.5,
     borderColor: Colors.danger,

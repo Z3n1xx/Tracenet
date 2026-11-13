@@ -7,8 +7,11 @@ import { router } from 'expo-router';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../services/firebase';
+import { uploadPhoto } from '../../services/cloudinary';
 import Colors from '../../constants/colors';
 import PasswordInput from '../../components/PasswordInput';
+import AvatarPicker from '../../components/AvatarPicker';
+import TermsModal from '../../components/TermsModal';
 
 const ROLE = 'Citizen / Family Member';
 
@@ -19,19 +22,30 @@ const AUTH_ERROR_MESSAGES = {
 };
 
 export default function RegisterScreen() {
+  const [photo, setPhoto] = useState(null);
   const [lastName, setLastName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [middleName, setMiddleName] = useState('');
+  const [age, setAge] = useState('');
+  const [birthday, setBirthday] = useState('');
+  const [gender, setGender] = useState('Female');
+  const [address, setAddress] = useState('');
   const [email, setEmail] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [termsVisible, setTermsVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   async function handleNext() {
-    if (!lastName || !firstName || !email || !contactNumber || !password || !confirmPassword) {
+    if (!lastName || !firstName || !age || !birthday || !address || !email || !contactNumber || !password || !confirmPassword) {
       setError('Please fill in all fields.');
+      return;
+    }
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(birthday)) {
+      setError('Birthday must be in MM/DD/YYYY format.');
       return;
     }
     if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
@@ -42,19 +56,36 @@ export default function RegisterScreen() {
       setError('Passwords do not match.');
       return;
     }
+    if (!agreedToTerms) {
+      setError('You must agree to the Terms and Conditions to continue.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
       const name = [firstName, middleName, lastName].filter(Boolean).join(' ');
+      let photoUrl = null;
+      if (photo) {
+        try {
+          photoUrl = await uploadPhoto(photo);
+        } catch (e) {
+          console.warn('Profile photo upload failed:', e.message);
+        }
+      }
       const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      await updateProfile(credential.user, { displayName: name });
+      await updateProfile(credential.user, { displayName: name, photoURL: photoUrl || undefined });
       await setDoc(doc(db, 'users', credential.user.uid), {
         name,
         lastName,
         firstName,
         middleName,
+        age: Number(age),
+        birthday,
+        gender,
+        address,
         email: email.trim(),
         contactNumber,
+        photoUrl,
         role: ROLE,
         createdAt: serverTimestamp(),
       });
@@ -83,6 +114,8 @@ export default function RegisterScreen() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
+        <AvatarPicker uri={photo} onChange={setPhoto} />
+
         <Text style={styles.label}>Last Name</Text>
         <TextInput
           style={styles.input}
@@ -108,6 +141,53 @@ export default function RegisterScreen() {
           placeholderTextColor={Colors.textGray}
           value={middleName}
           onChangeText={setMiddleName}
+        />
+
+        <View style={styles.rowFields}>
+          <View style={styles.rowFieldHalf}>
+            <Text style={styles.label}>Age</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="34"
+              placeholderTextColor={Colors.textGray}
+              value={age}
+              onChangeText={setAge}
+              keyboardType="number-pad"
+            />
+          </View>
+          <View style={styles.rowFieldHalf}>
+            <Text style={styles.label}>Gender</Text>
+            <View style={styles.sexRow}>
+              {['Male', 'Female'].map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.sexBtn, gender === s && styles.sexBtnActive]}
+                  onPress={() => setGender(s)}
+                >
+                  <Text style={[styles.sexBtnText, gender === s && styles.sexBtnTextActive]}>{s}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        <Text style={styles.label}>Birthday</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="MM/DD/YYYY"
+          placeholderTextColor={Colors.textGray}
+          value={birthday}
+          onChangeText={setBirthday}
+          keyboardType="number-pad"
+        />
+
+        <Text style={styles.label}>Address</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Brgy., Street, Cebu City"
+          placeholderTextColor={Colors.textGray}
+          value={address}
+          onChangeText={setAddress}
         />
 
         <Text style={styles.label}>Email Address</Text>
@@ -150,6 +230,22 @@ export default function RegisterScreen() {
         />
 
         <TouchableOpacity
+          style={styles.termsRow}
+          onPress={() => setAgreedToTerms((v) => !v)}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
+            {agreedToTerms && <Text style={styles.checkboxTick}>✓</Text>}
+          </View>
+          <Text style={styles.termsText}>
+            I agree to the{' '}
+            <Text style={styles.termsLink} onPress={() => setTermsVisible(true)}>
+              Terms and Conditions
+            </Text>
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleNext}
           disabled={loading}
@@ -164,6 +260,8 @@ export default function RegisterScreen() {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <TermsModal visible={termsVisible} onClose={() => setTermsVisible(false)} />
     </KeyboardAvoidingView>
   );
 }
@@ -213,4 +311,34 @@ const styles = StyleSheet.create({
   link: { fontSize: 14, color: Colors.textGray },
   linkBold: { color: Colors.primary, fontWeight: '700' },
   error: { color: Colors.danger, fontSize: 13, marginBottom: 12 },
+  rowFields: { flexDirection: 'row', gap: 12 },
+  rowFieldHalf: { flex: 1 },
+  sexRow: { flexDirection: 'row', gap: 8 },
+  sexBtn: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingVertical: 13,
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+  },
+  sexBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  sexBtnText: { fontSize: 14, fontWeight: '600', color: Colors.textGray },
+  sexBtnTextActive: { color: Colors.primary },
+  termsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 18, marginTop: 4 },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  checkboxChecked: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  checkboxTick: { color: Colors.white, fontSize: 14, fontWeight: '800' },
+  termsText: { fontSize: 13, color: Colors.textDark, flex: 1 },
+  termsLink: { color: Colors.primary, fontWeight: '700' },
 });
