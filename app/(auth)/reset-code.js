@@ -7,11 +7,12 @@ import { router } from 'expo-router';
 import { confirmPasswordReset } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 import Colors from '../../constants/colors';
+import PasswordInput from '../../components/PasswordInput';
 
 const AUTH_ERROR_MESSAGES = {
   'auth/expired-action-code': 'This reset code has expired. Please request a new one.',
   'auth/invalid-action-code': 'That reset code is invalid. Check that you copied it correctly.',
-  'auth/weak-password': 'Password should be at least 6 characters.',
+  'auth/weak-password': 'Password should be at least 8 characters and include a letter and a number.',
 };
 
 function extractCode(input) {
@@ -34,8 +35,8 @@ export default function ResetCodeScreen() {
       setError('Please enter the code from your email.');
       return;
     }
-    if (newPassword.length < 6) {
-      setError('Password should be at least 6 characters.');
+    if (newPassword.length < 8 || !/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      setError('Password must be at least 8 characters and include a letter and a number.');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -104,23 +105,21 @@ export default function ResetCodeScreen() {
             />
 
             <Text style={styles.label}>New Password</Text>
-            <TextInput
+            <PasswordInput
               style={styles.input}
-              placeholder="At least 6 characters"
+              placeholder="At least 8 characters, with a letter and a number"
               placeholderTextColor={Colors.textGray}
               value={newPassword}
               onChangeText={setNewPassword}
-              secureTextEntry
             />
 
             <Text style={styles.label}>Confirm New Password</Text>
-            <TextInput
+            <PasswordInput
               style={styles.input}
               placeholder="Re-enter new password"
               placeholderTextColor={Colors.textGray}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              secureTextEntry
             />
 
             <TouchableOpacity

@@ -8,13 +8,14 @@ import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../services/firebase';
 import Colors from '../../constants/colors';
+import PasswordInput from '../../components/PasswordInput';
 
 const ROLE = 'Citizen / Family Member';
 
 const AUTH_ERROR_MESSAGES = {
   'auth/email-already-in-use': 'An account with this email already exists.',
   'auth/invalid-email': 'Please enter a valid email address.',
-  'auth/weak-password': 'Password must be at least 6 characters.',
+  'auth/weak-password': 'Password must be at least 8 characters and include a letter and a number.',
 };
 
 export default function RegisterScreen() {
@@ -33,8 +34,8 @@ export default function RegisterScreen() {
       setError('Please fill in all fields.');
       return;
     }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      setError('Password must be at least 8 characters and include a letter and a number.');
       return;
     }
     if (password !== confirmPassword) {
@@ -131,23 +132,21 @@ export default function RegisterScreen() {
         />
 
         <Text style={styles.label}>Password</Text>
-        <TextInput
+        <PasswordInput
           style={styles.input}
-          placeholder="At least 6 characters"
+          placeholder="At least 8 characters, with a letter and a number"
           placeholderTextColor={Colors.textGray}
           value={password}
           onChangeText={setPassword}
-          secureTextEntry
         />
 
         <Text style={styles.label}>Confirm Password</Text>
-        <TextInput
+        <PasswordInput
           style={styles.input}
           placeholder="Re-enter password"
           placeholderTextColor={Colors.textGray}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
-          secureTextEntry
         />
 
         <TouchableOpacity

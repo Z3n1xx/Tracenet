@@ -8,11 +8,12 @@ import { signOut, updateProfile, EmailAuthProvider, reauthenticateWithCredential
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import Colors from '../constants/colors';
+import PasswordInput from '../components/PasswordInput';
 
 const PASSWORD_ERROR_MESSAGES = {
   'auth/invalid-credential': 'Current password is incorrect.',
   'auth/wrong-password': 'Current password is incorrect.',
-  'auth/weak-password': 'New password must be at least 6 characters.',
+  'auth/weak-password': 'New password must be at least 8 characters and include a letter and a number.',
   'auth/too-many-requests': 'Too many attempts. Please try again later.',
 };
 
@@ -84,8 +85,12 @@ export default function ProfileScreen() {
       setPasswordError('Please fill in all password fields.');
       return;
     }
-    if (newPassword.length < 6) {
-      setPasswordError('New password must be at least 6 characters.');
+    if (newPassword.length < 8 || !/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      setPasswordError('New password must be at least 8 characters and include a letter and a number.');
+      return;
+    }
+    if (newPassword === currentPassword) {
+      setPasswordError('New password must be different from your current password.');
       return;
     }
     if (newPassword !== confirmNewPassword) {
@@ -187,33 +192,30 @@ export default function ProfileScreen() {
         {passwordChanged ? <Text style={styles.saved}>Password changed.</Text> : null}
 
         <Text style={styles.label}>Current Password</Text>
-        <TextInput
+        <PasswordInput
           style={styles.input}
           placeholder="••••••••"
           placeholderTextColor={Colors.textGray}
           value={currentPassword}
           onChangeText={(v) => { setCurrentPassword(v); setPasswordChanged(false); }}
-          secureTextEntry
         />
 
         <Text style={styles.label}>New Password</Text>
-        <TextInput
+        <PasswordInput
           style={styles.input}
-          placeholder="At least 6 characters"
+          placeholder="At least 8 characters, with a letter and a number"
           placeholderTextColor={Colors.textGray}
           value={newPassword}
           onChangeText={(v) => { setNewPassword(v); setPasswordChanged(false); }}
-          secureTextEntry
         />
 
         <Text style={styles.label}>Confirm New Password</Text>
-        <TextInput
+        <PasswordInput
           style={styles.input}
           placeholder="Re-enter new password"
           placeholderTextColor={Colors.textGray}
           value={confirmNewPassword}
           onChangeText={(v) => { setConfirmNewPassword(v); setPasswordChanged(false); }}
-          secureTextEntry
         />
 
         <TouchableOpacity

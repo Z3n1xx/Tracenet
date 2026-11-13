@@ -112,14 +112,26 @@ function ReportForm({ typeParam }) {
         }
       }
 
+      let finalCoords = coords;
+      if (!finalCoords && location) {
+        try {
+          const geocoded = await Location.geocodeAsync(location);
+          if (geocoded.length > 0) {
+            finalCoords = { latitude: geocoded[0].latitude, longitude: geocoded[0].longitude };
+          }
+        } catch (e) {
+          console.warn('Geocoding failed:', e.message);
+        }
+      }
+
       const docRef = await addDoc(collection(db, 'reports'), {
         type: isSighting ? 'sighting' : 'missing',
         name: name || 'Unidentified person',
         age: age ? Number(age) : null,
         sex,
         location,
-        latitude: coords?.latitude ?? null,
-        longitude: coords?.longitude ?? null,
+        latitude: finalCoords?.latitude ?? null,
+        longitude: finalCoords?.longitude ?? null,
         description,
         photoUrl,
         reportedByUid: auth.currentUser.uid,

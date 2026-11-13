@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 import Colors from '../../constants/colors';
+import PasswordInput from '../../components/PasswordInput';
 
 const AUTH_ERROR_MESSAGES = {
   'auth/invalid-email': 'Please enter a valid email address.',
@@ -71,13 +72,12 @@ export default function LoginScreen() {
           />
 
           <Text style={styles.label}>Password</Text>
-          <TextInput
+          <PasswordInput
             style={styles.input}
             placeholder="••••••••"
             placeholderTextColor={Colors.textGray}
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
           />
 
           <TouchableOpacity
