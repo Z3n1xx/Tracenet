@@ -11,7 +11,8 @@ import { uploadPhoto } from '../../services/cloudinary';
 import Colors from '../../constants/colors';
 import PasswordInput from '../../components/PasswordInput';
 import AvatarPicker from '../../components/AvatarPicker';
-import TermsModal from '../../components/TermsModal';
+import PolicyModal from '../../components/PolicyModal';
+import { TERMS_TEXT, PRIVACY_TEXT } from '../../constants/policies';
 
 const ROLE = 'Citizen / Family Member';
 
@@ -35,7 +36,9 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
   const [termsVisible, setTermsVisible] = useState(false);
+  const [privacyVisible, setPrivacyVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -58,6 +61,10 @@ export default function RegisterScreen() {
     }
     if (!agreedToTerms) {
       setError('You must agree to the Terms and Conditions to continue.');
+      return;
+    }
+    if (!agreedToPrivacy) {
+      setError('You must agree to the Privacy Policy to continue.');
       return;
     }
     setLoading(true);
@@ -246,6 +253,22 @@ export default function RegisterScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={styles.termsRow}
+          onPress={() => setAgreedToPrivacy((v) => !v)}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.checkbox, agreedToPrivacy && styles.checkboxChecked]}>
+            {agreedToPrivacy && <Text style={styles.checkboxTick}>✓</Text>}
+          </View>
+          <Text style={styles.termsText}>
+            I agree to the{' '}
+            <Text style={styles.termsLink} onPress={() => setPrivacyVisible(true)}>
+              Privacy Policy
+            </Text>
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleNext}
           disabled={loading}
@@ -261,7 +284,18 @@ export default function RegisterScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      <TermsModal visible={termsVisible} onClose={() => setTermsVisible(false)} />
+      <PolicyModal
+        visible={termsVisible}
+        onClose={() => setTermsVisible(false)}
+        title="Terms and Conditions"
+        text={TERMS_TEXT}
+      />
+      <PolicyModal
+        visible={privacyVisible}
+        onClose={() => setPrivacyVisible(false)}
+        title="Privacy Policy"
+        text={PRIVACY_TEXT}
+      />
     </KeyboardAvoidingView>
   );
 }
