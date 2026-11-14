@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, ScrollView,
+  StyleSheet,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { router } from 'expo-router';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -12,7 +13,10 @@ import Colors from '../../constants/colors';
 import PasswordInput from '../../components/PasswordInput';
 import AvatarPicker from '../../components/AvatarPicker';
 import PolicyModal from '../../components/PolicyModal';
+import DateField from '../../components/DateField';
 import { TERMS_TEXT, PRIVACY_TEXT } from '../../constants/policies';
+import { sanitizeName, sanitizeAge } from '../../utils/sanitize';
+import { isAgeConsistentWithBirthday } from '../../utils/age';
 
 const ROLE = 'Citizen / Family Member';
 
@@ -48,7 +52,11 @@ export default function RegisterScreen() {
       return;
     }
     if (!/^\d{2}\/\d{2}\/\d{4}$/.test(birthday)) {
-      setError('Birthday must be in MM/DD/YYYY format.');
+      setError('Please select your birthday.');
+      return;
+    }
+    if (!isAgeConsistentWithBirthday(age, birthday)) {
+      setError("The age you entered doesn't match your birthday. Please check both.");
       return;
     }
     if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
@@ -105,11 +113,13 @@ export default function RegisterScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+    <View style={styles.container}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+        extraScrollHeight={20}
+      >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Text style={styles.backText}>‹</Text>
         </TouchableOpacity>
@@ -129,7 +139,7 @@ export default function RegisterScreen() {
           placeholder="Dela Cruz"
           placeholderTextColor={Colors.textGray}
           value={lastName}
-          onChangeText={setLastName}
+          onChangeText={(v) => setLastName(sanitizeName(v))}
         />
 
         <Text style={styles.label}>First Name</Text>
@@ -138,7 +148,7 @@ export default function RegisterScreen() {
           placeholder="Juan"
           placeholderTextColor={Colors.textGray}
           value={firstName}
-          onChangeText={setFirstName}
+          onChangeText={(v) => setFirstName(sanitizeName(v))}
         />
 
         <Text style={styles.label}>Middle Name (optional)</Text>
@@ -147,7 +157,7 @@ export default function RegisterScreen() {
           placeholder="Santos"
           placeholderTextColor={Colors.textGray}
           value={middleName}
-          onChangeText={setMiddleName}
+          onChangeText={(v) => setMiddleName(sanitizeName(v))}
         />
 
         <View style={styles.rowFields}>
@@ -158,7 +168,7 @@ export default function RegisterScreen() {
               placeholder="34"
               placeholderTextColor={Colors.textGray}
               value={age}
-              onChangeText={setAge}
+              onChangeText={(v) => setAge(sanitizeAge(v))}
               keyboardType="number-pad"
             />
           </View>
@@ -179,14 +189,7 @@ export default function RegisterScreen() {
         </View>
 
         <Text style={styles.label}>Birthday</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="MM/DD/YYYY"
-          placeholderTextColor={Colors.textGray}
-          value={birthday}
-          onChangeText={setBirthday}
-          keyboardType="number-pad"
-        />
+        <DateField style={styles.input} value={birthday} onChange={setBirthday} />
 
         <Text style={styles.label}>Address</Text>
         <TextInput
@@ -282,7 +285,7 @@ export default function RegisterScreen() {
             <Text style={styles.linkBold}>Sign In</Text>
           </Text>
         </TouchableOpacity>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <PolicyModal
         visible={termsVisible}
@@ -296,13 +299,13 @@ export default function RegisterScreen() {
         title="Privacy Policy"
         text={PRIVACY_TEXT}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
-  scroll: { flexGrow: 1, padding: 28, paddingTop: 56 },
+  scroll: { flexGrow: 1, padding: 28, paddingTop: 56, paddingBottom: 200 },
   backBtn: { marginBottom: 12 },
   backText: { fontSize: 28, color: Colors.textDark, fontWeight: '400' },
   title: { fontSize: 24, fontWeight: '800', color: Colors.textDark, marginBottom: 6 },

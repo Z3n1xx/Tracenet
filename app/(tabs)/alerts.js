@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet,
+  StyleSheet, ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { collection, onSnapshot } from 'firebase/firestore';
@@ -129,22 +129,27 @@ export default function AlertsScreen() {
         </View>
       </View>
 
-      <FlatList
-        data={types}
-        keyExtractor={(t) => t}
+      <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterList}
         style={styles.filterBar}
-        renderItem={({ item }) => (
+      >
+        {types.map((item) => (
           <TouchableOpacity
+            key={item}
             style={[styles.filterBtn, filter === item && styles.filterBtnActive]}
             onPress={() => setFilter(item)}
           >
-            <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item}</Text>
+            <Text
+              style={[styles.filterText, filter === item && styles.filterTextActive]}
+              numberOfLines={1}
+            >
+              {item}
+            </Text>
           </TouchableOpacity>
-        )}
-      />
+        ))}
+      </ScrollView>
 
       <FlatList
         data={filtered}
@@ -186,6 +191,7 @@ const styles = StyleSheet.create({
   },
   filterList: { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
   filterBtn: {
+    flexShrink: 0,
     paddingHorizontal: 14,
     paddingVertical: 5,
     borderRadius: 20,

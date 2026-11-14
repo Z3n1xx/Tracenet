@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, ScrollView,
+  StyleSheet,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { router } from 'expo-router';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../services/firebase';
@@ -39,10 +40,7 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Text style={styles.backText}>‹</Text>
@@ -51,7 +49,12 @@ export default function ForgotPasswordScreen() {
         <Text style={styles.headerSub}>We'll email you a reset link</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+        extraScrollHeight={20}
+      >
         {sent ? (
           <View style={styles.successBox}>
             <View style={styles.successIconCircle}>
@@ -104,8 +107,8 @@ export default function ForgotPasswordScreen() {
             </TouchableOpacity>
           </>
         )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }
 
@@ -121,7 +124,7 @@ const styles = StyleSheet.create({
   backText: { fontSize: 28, color: Colors.white, fontWeight: '400' },
   headerTitle: { fontSize: 20, fontWeight: '800', color: Colors.white },
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 4 },
-  scroll: { flexGrow: 1, padding: 28 },
+  scroll: { flexGrow: 1, padding: 28, paddingBottom: 150 },
   intro: { fontSize: 13, color: Colors.textGray, lineHeight: 19, marginBottom: 20 },
   label: { fontSize: 13, fontWeight: '600', color: Colors.textDark, marginBottom: 6 },
   input: {

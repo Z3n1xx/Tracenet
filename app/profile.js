@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert,
+  StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { router } from 'expo-router';
 import { signOut, updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -11,6 +12,9 @@ import { uploadPhoto } from '../services/cloudinary';
 import Colors from '../constants/colors';
 import PasswordInput from '../components/PasswordInput';
 import AvatarPicker from '../components/AvatarPicker';
+import DateField from '../components/DateField';
+import { sanitizeName, sanitizeAge } from '../utils/sanitize';
+import { isAgeConsistentWithBirthday } from '../utils/age';
 
 const PASSWORD_ERROR_MESSAGES = {
   'auth/invalid-credential': 'Current password is incorrect.',
@@ -78,7 +82,11 @@ export default function ProfileScreen() {
       return;
     }
     if (!/^\d{2}\/\d{2}\/\d{4}$/.test(birthday)) {
-      setError('Birthday must be in MM/DD/YYYY format.');
+      setError('Please select your birthday.');
+      return;
+    }
+    if (!isAgeConsistentWithBirthday(age, birthday)) {
+      setError("The age you entered doesn't match your birthday. Please check both.");
       return;
     }
     const unchanged = photo === original.photoUrl && name === original.name
@@ -167,10 +175,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
@@ -180,7 +185,12 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+        extraScrollHeight={20}
+      >
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {saved ? <Text style={styles.saved}>Profile updated.</Text> : null}
 
@@ -192,7 +202,7 @@ export default function ProfileScreen() {
           placeholder="Juan dela Cruz"
           placeholderTextColor={Colors.textGray}
           value={name}
-          onChangeText={(v) => { setName(v); setSaved(false); }}
+          onChangeText={(v) => { setName(sanitizeName(v)); setSaved(false); }}
         />
 
         <View style={styles.rowFields}>
@@ -203,7 +213,7 @@ export default function ProfileScreen() {
               placeholder="34"
               placeholderTextColor={Colors.textGray}
               value={age}
-              onChangeText={(v) => { setAge(v); setSaved(false); }}
+              onChangeText={(v) => { setAge(sanitizeAge(v)); setSaved(false); }}
               keyboardType="number-pad"
             />
           </View>
@@ -224,13 +234,10 @@ export default function ProfileScreen() {
         </View>
 
         <Text style={styles.label}>Birthday</Text>
-        <TextInput
+        <DateField
           style={styles.input}
-          placeholder="MM/DD/YYYY"
-          placeholderTextColor={Colors.textGray}
           value={birthday}
-          onChangeText={(v) => { setBirthday(v); setSaved(false); }}
-          keyboardType="number-pad"
+          onChange={(v) => { setBirthday(v); setSaved(false); }}
         />
 
         <Text style={styles.label}>Address</Text>
@@ -314,8 +321,8 @@ export default function ProfileScreen() {
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Log Out</Text>
         </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }
 
@@ -330,7 +337,7 @@ const styles = StyleSheet.create({
   },
   backBtn: {},
   backText: { fontSize: 18, fontWeight: '800', color: Colors.white },
-  scroll: { padding: 28, paddingBottom: 48 },
+  scroll: { padding: 28, paddingBottom: 200 },
   label: { fontSize: 13, fontWeight: '600', color: Colors.textDark, marginBottom: 6 },
   input: {
     borderWidth: 1,

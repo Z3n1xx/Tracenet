@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, Image, Alert,
+  StyleSheet, Image, Alert,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -10,6 +11,7 @@ import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../services/firebase';
 import { uploadPhoto } from '../../services/cloudinary';
 import Colors from '../../constants/colors';
+import { sanitizeName, sanitizeAge } from '../../utils/sanitize';
 
 export default function ReportScreen() {
   const { type: typeParam } = useLocalSearchParams();
@@ -167,7 +169,13 @@ function ReportForm({ typeParam }) {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        enableOnAndroid
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Photo Upload */}
         <TouchableOpacity
           style={styles.photoUpload}
@@ -213,7 +221,7 @@ function ReportForm({ typeParam }) {
           placeholder={isSighting ? 'Leave blank if unknown' : 'Full name'}
           placeholderTextColor={Colors.textGray}
           value={name}
-          onChangeText={setName}
+          onChangeText={(v) => setName(sanitizeName(v))}
         />
 
         {/* Age + Gender */}
@@ -225,7 +233,7 @@ function ReportForm({ typeParam }) {
               placeholder="34"
               placeholderTextColor={Colors.textGray}
               value={age}
-              onChangeText={setAge}
+              onChangeText={(v) => setAge(sanitizeAge(v))}
               keyboardType="number-pad"
             />
           </View>
@@ -288,7 +296,7 @@ function ReportForm({ typeParam }) {
             {loading ? 'Submitting...' : isSighting ? 'Submit Sighting Report →' : 'Submit Report →'}
           </Text>
         </TouchableOpacity>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
@@ -317,7 +325,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: 2,
   },
-  scroll: { padding: 16, paddingBottom: 40 },
+  scroll: { padding: 16, paddingBottom: 200 },
   photoUpload: {
     backgroundColor: Colors.white,
     borderRadius: 14,
