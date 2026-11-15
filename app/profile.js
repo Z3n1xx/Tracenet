@@ -267,7 +267,6 @@ export default function ProfileScreen() {
         { merge: true }
       );
     } catch {
-      // non-blocking
     }
   }
 
@@ -378,7 +377,6 @@ export default function ProfileScreen() {
         enableOnAndroid
         extraScrollHeight={20}
       >
-        {/* Section 1: Personal & Barangay Details */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>👤 Personal & Barangay Details</Text>
           {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -487,7 +485,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Section 2: Notification Preferences */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>🔔 Notification Preferences</Text>
           <Text style={styles.sectionSub}>
@@ -542,7 +539,6 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Section 3: Cebu City Emergency Hotlines Directory */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>🚨 Cebu City Emergency Hotlines</Text>
           <Text style={styles.sectionSub}>
@@ -571,7 +567,6 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        {/* Section 4: Missing Person Reporting Safety Tips */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>🛡️ Reporting Safety Guidelines</Text>
           {SAFETY_TIPS.map((tip, idx) => (
@@ -587,7 +582,6 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        {/* Section 5: Security & Change Password */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>🔐 Change Password</Text>
           {passwordError ? <Text style={styles.error}>{passwordError}</Text> : null}
@@ -632,7 +626,6 @@ export default function ProfileScreen() {
         </View>
       </KeyboardAwareScrollView>
 
-      {/* Searchable 80-Barangay Picker Modal */}
       <Modal
         visible={barangayModalVisible}
         animationType="slide"

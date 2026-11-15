@@ -24,8 +24,8 @@ const STATUS_TABS = [
 
 export default function CasesScreen() {
   const [cases, setCases] = useState([]);
-  const [scope, setScope] = useState('citywide'); // 'citywide' | 'mine'
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'resolved'
+  const [scope, setScope] = useState('citywide');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const currentUid = auth.currentUser?.uid;
@@ -94,7 +94,6 @@ export default function CasesScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* My Reports / Citywide Scope Toggle (Figure 19) */}
         <View style={styles.scopeSwitch}>
           <TouchableOpacity
             style={[styles.scopeBtn, scope === 'citywide' && styles.scopeBtnActive]}
@@ -115,7 +114,6 @@ export default function CasesScreen() {
         </View>
       </View>
 
-      {/* Search + All / Active / Resolved Filter Tabs */}
       <View style={styles.controlsBar}>
         <View style={styles.searchWrap}>
           <Text style={styles.searchIcon}>🔍</Text>

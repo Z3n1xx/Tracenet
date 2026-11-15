@@ -1,6 +1,3 @@
-// Geo & Spatial Coordination helpers for TraceNet Mobile (Objective 3: Map Pinning,
-// Nearby Cases Radius Search, and Cebu City 80 Barangays Directory).
-// Kept 100% compatible with Web `lib/geo.js`.
 
 export const CEBU_CITY_BARANGAYS = [
   'Adlaon', 'Agsungot', 'Apas', 'Babag', 'Bacayan', 'Banilad', 'Basak Pardo',

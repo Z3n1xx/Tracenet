@@ -2,13 +2,6 @@ import { collection, getDocs, addDoc, query, where, serverTimestamp } from 'fire
 import { db } from './firebase';
 import { BARANGAY_CENTROIDS, haversineKm, inferBarangay } from '../constants/barangays';
 
-/**
- * TraceNet Objective 2 — 80/20 Multimodal AI Matching Engine & FISWG Rubric (Mobile)
- *
- * Manuscript Formula (Objective 2, p. 13, p. 38, p. 80 Fig 18, p. 165):
- *   Overall Confidence = 0.80 * FacialScore + 0.20 * TextScore
- */
-
 export const FACIAL_WEIGHT = 0.8;
 export const TEXT_WEIGHT = 0.2;
 
@@ -98,7 +91,6 @@ export const FISWG_FEATURES = [
   },
 ];
 
-// Multilingual Cebuano / Tagalog / English synonym normalization map
 const SYNONYM_GROUPS = [
   ['white', 'puti', 'ivory', 'cream'],
   ['blue', 'asul', 'navy', 'denim'],
@@ -189,9 +181,6 @@ function deterministicFacialScore(missing, sighting, textScore) {
 
   const mName = String(missing?.name || '').toLowerCase();
   const sLoc = String(sighting?.location || '').toLowerCase();
-  if (mName.includes('maria santos') && sLoc.includes('mabolo')) {
-    return 88.5;
-  }
 
   if (missing?.photoUrl && sighting?.photoUrl && missing.photoUrl === sighting.photoUrl) {
     return 99.2;
@@ -219,14 +208,6 @@ function deterministicFacialScore(missing, sighting, textScore) {
 export function computeTextSimilarity(missing = {}, sighting = {}) {
   const matchedAttributes = [];
 
-  const mName = String(missing?.name || '').toLowerCase();
-  const sLoc = String(sighting?.location || '').toLowerCase();
-  const isMariaDemo =
-    mName.includes('maria santos') &&
-    sLoc.includes('mabolo') &&
-    String(sighting?.description || '').toLowerCase().includes('eyeglasses');
-
-  // 1. Gender compatibility (30 points)
   const mSex = String(missing?.sex || '').trim().toLowerCase();
   const sSex = String(sighting?.sex || '').trim().toLowerCase();
   let sexScore = 20;
@@ -240,7 +221,6 @@ export function computeTextSimilarity(missing = {}, sighting = {}) {
     }
   }
 
-  // 2. Age proximity (25 points)
   const mAge = Number(missing?.age);
   const sAge = Number(sighting?.age);
   let ageScore = 18;
@@ -262,7 +242,6 @@ export function computeTextSimilarity(missing = {}, sighting = {}) {
     ageScore = 21;
   }
 
-  // 3. Location / Barangay proximity (20 points)
   const mBrgyName =
     missing?.barangay ||
     inferBarangay({
@@ -319,7 +298,6 @@ export function computeTextSimilarity(missing = {}, sighting = {}) {
     }
   }
 
-  // 4. Clothing & physical description token overlap (25 points)
   const mTokens = extractCanonicalTokens(
     `${missing?.description || ''} ${missing?.circumstances || ''}`
   );
@@ -336,20 +314,6 @@ export function computeTextSimilarity(missing = {}, sighting = {}) {
     if (shared.length > 0) {
       matchedAttributes.push(`✓ Clothing/desc overlap (${shared.slice(0, 3).join(', ')})`);
     }
-  }
-
-  if (isMariaDemo) {
-    return {
-      textScore: 85.2,
-      distanceKm: 5.4,
-      sharedKeywords: shared.length ? shared : ['white', 'jeans', 'eyeglasses'],
-      matchedAttributes: [
-        '✓ Age match (34 vs mid-30s)',
-        '✓ Gender match (Female)',
-        '✓ Location proximity (5.4 km)',
-        '✓ Clothing overlap (blue jeans, eyeglasses)',
-      ],
-    };
   }
 
   const rawTotal = Math.max(10, Math.min(99, sexScore + ageScore + locScore + descScore));
@@ -419,10 +383,6 @@ export function rankCandidatesForReport(targetReport, allReports = [], minConfid
     .sort((a, b) => b.overallConfidence - a.overallConfidence);
 }
 
-/**
- * Automatically evaluate a newly submitted report against active opposite-type
- * reports in Firestore and create `matches` documents for top candidates (>= 65%).
- */
 export async function triggerAutoMatchForReport(newReport) {
   if (!newReport || !newReport.id) return [];
   try {
@@ -432,7 +392,6 @@ export async function triggerAutoMatchForReport(newReport) {
     const createdMatches = [];
 
     for (const candidate of ranked) {
-      // Avoid creating duplicate match pair
       const existingQuery = query(
         collection(db, 'matches'),
         where('missingReportId', '==', candidate.missingReportId),

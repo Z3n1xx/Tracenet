@@ -26,10 +26,6 @@ export async function requestNotificationPermission() {
   return status === 'granted';
 }
 
-// Registers this device for background push (works while the app is closed)
-// by saving its raw FCM token to the user's Firestore doc. A separate
-// server-side Cloud Function (outside mobile scope) reads this token to
-// actually send the push when a report's status changes.
 export async function registerPushToken() {
   if (Platform.OS === 'web') return;
   const uid = auth.currentUser?.uid;

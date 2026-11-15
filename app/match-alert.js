@@ -17,27 +17,6 @@ import {
   recommendFiswgTier,
 } from '../services/aiService';
 
-const DEMO_MISSING = {
-  id: 'demo-2038',
-  caseCode: '#2038',
-  name: 'Maria Santos',
-  age: 34,
-  sex: 'Female',
-  location: 'Brgy. Labangon, Cebu City',
-  description: 'White blouse, blue jeans, wearing eyeglasses',
-  photoUrl: null,
-};
-
-const DEMO_SIGHTING = {
-  id: 'demo-sighting-101',
-  name: 'Unidentified F.',
-  age: 34,
-  sex: 'Female',
-  location: 'Brgy. Mabolo, Cebu City',
-  description: 'Disoriented, wearing white blouse, blue jeans, eyeglasses',
-  photoUrl: null,
-};
-
 export default function MatchAlertScreen() {
   const { id } = useLocalSearchParams();
   const [match, setMatch] = useState(null);
@@ -59,7 +38,6 @@ export default function MatchAlertScreen() {
 
     async function loadFallbackOrSubscribe() {
       if (!id) {
-        // Try fetching the most recent match from Firestore; fallback to Manuscript Demo
         try {
           const snap = await getDocs(collection(db, 'matches'));
           if (!snap.empty) {
@@ -71,17 +49,17 @@ export default function MatchAlertScreen() {
               getDoc(doc(db, 'reports', latest.missingReportId)),
               getDoc(doc(db, 'reports', latest.sightingReportId)),
             ]);
-            setMissingReport(mSnap.exists() ? { id: mSnap.id, ...mSnap.data() } : DEMO_MISSING);
-            setSightingReport(sSnap.exists() ? { id: sSnap.id, ...sSnap.data() } : DEMO_SIGHTING);
+            setMissingReport(mSnap.exists() ? { id: mSnap.id, ...mSnap.data() } : null);
+            setSightingReport(sSnap.exists() ? { id: sSnap.id, ...sSnap.data() } : null);
           } else {
-            setMatch({ id: 'demo-match-101', status: 'pending', confidence: 87.8 });
-            setMissingReport(DEMO_MISSING);
-            setSightingReport(DEMO_SIGHTING);
+            setMatch(null);
+            setMissingReport(null);
+            setSightingReport(null);
           }
         } catch {
-          setMatch({ id: 'demo-match-101', status: 'pending', confidence: 87.8 });
-          setMissingReport(DEMO_MISSING);
-          setSightingReport(DEMO_SIGHTING);
+          setMatch(null);
+          setMissingReport(null);
+          setSightingReport(null);
         } finally {
           setLoading(false);
         }
@@ -92,9 +70,9 @@ export default function MatchAlertScreen() {
         doc(db, 'matches', id),
         async (snap) => {
           if (!snap.exists()) {
-            setMatch({ id: 'demo-match-101', status: 'pending', confidence: 87.8 });
-            setMissingReport(DEMO_MISSING);
-            setSightingReport(DEMO_SIGHTING);
+            setMatch(null);
+            setMissingReport(null);
+            setSightingReport(null);
             setLoading(false);
             return;
           }
@@ -105,10 +83,10 @@ export default function MatchAlertScreen() {
             getDoc(doc(db, 'reports', data.sightingReportId)),
           ]);
           setMissingReport(
-            missingSnap.exists() ? { id: missingSnap.id, ...missingSnap.data() } : DEMO_MISSING
+            missingSnap.exists() ? { id: missingSnap.id, ...missingSnap.data() } : null
           );
           setSightingReport(
-            sightingSnap.exists() ? { id: sightingSnap.id, ...sightingSnap.data() } : DEMO_SIGHTING
+            sightingSnap.exists() ? { id: sightingSnap.id, ...sightingSnap.data() } : null
           );
           if (data.fiswgTier) setSelectedTier(data.fiswgTier);
           if (Array.isArray(data.fiswgFeatures) && data.fiswgFeatures.length) {
@@ -117,9 +95,9 @@ export default function MatchAlertScreen() {
           setLoading(false);
         },
         () => {
-          setMatch({ id: 'demo-match-101', status: 'pending', confidence: 87.8 });
-          setMissingReport(DEMO_MISSING);
-          setSightingReport(DEMO_SIGHTING);
+          setMatch(null);
+          setMissingReport(null);
+          setSightingReport(null);
           setLoading(false);
         }
       );
@@ -131,8 +109,8 @@ export default function MatchAlertScreen() {
     };
   }, [id]);
 
-  const activeMissing = missingReport || DEMO_MISSING;
-  const activeSighting = sightingReport || DEMO_SIGHTING;
+  const activeMissing = missingReport || {};
+  const activeSighting = sightingReport || {};
 
   const computed = useMemo(
     () => computeWeightedMatch(activeMissing, activeSighting, match?.facialScore ?? null),
@@ -247,6 +225,25 @@ export default function MatchAlertScreen() {
     );
   }
 
+  if (!match || !missingReport || !sightingReport) {
+    return (
+      <View style={[styles.container, styles.centered, { padding: 24 }]}>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.textDark, marginBottom: 6 }}>
+          No AI Match Alert Found
+        </Text>
+        <Text style={{ fontSize: 13, color: Colors.textGray, textAlign: 'center', marginBottom: 16 }}>
+          When a missing person report and a sighting match via the 80/20 AI engine, it will appear here.
+        </Text>
+        <TouchableOpacity
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/alerts'))}
+          style={{ backgroundColor: Colors.primary, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10 }}
+        >
+          <Text style={{ color: Colors.white, fontWeight: '700' }}>‹ Back to Alerts</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const isPending = !match?.status || match.status === 'pending';
   const activeTierObj = FISWG_TIERS.find((t) => t.tier === selectedTier) || FISWG_TIERS[3];
 
@@ -273,7 +270,6 @@ export default function MatchAlertScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Main Comparison Card (Manuscript Figure 18) */}
         <View style={styles.card}>
           <View style={styles.pipelineRow}>
             <View style={styles.pipelineBadge}>
@@ -288,7 +284,6 @@ export default function MatchAlertScreen() {
             🤖 AI Candidate Match — {overallConfidence.toFixed(1)}% Confidence
           </Text>
 
-          {/* Side-by-Side Missing vs Found Cards */}
           <View style={styles.photoRow}>
             <View style={styles.photoCard}>
               <View style={styles.photoBox}>
@@ -341,14 +336,12 @@ export default function MatchAlertScreen() {
             </View>
           </View>
 
-          {/* Objective 2: 80/20 Weighted Similarity Breakdown */}
           <View style={styles.breakdownBox}>
             <View style={styles.breakdownHeader}>
               <Text style={styles.breakdownTitle}>80/20 SIMILARITY BREAKDOWN</Text>
               <Text style={styles.formulaChip}>0.80 × Face + 0.20 × Text</Text>
             </View>
 
-            {/* 1. Facial Feature Similarity (80% Weight) */}
             <View style={styles.metricBlock}>
               <View style={styles.metricLabelRow}>
                 <View style={styles.metricLeft}>
@@ -377,7 +370,6 @@ export default function MatchAlertScreen() {
               </View>
             </View>
 
-            {/* 2. NLP Text Description Similarity (20% Weight) */}
             <View style={styles.metricBlock}>
               <View style={styles.metricLabelRow}>
                 <View style={styles.metricLeft}>
@@ -406,7 +398,6 @@ export default function MatchAlertScreen() {
               </View>
             </View>
 
-            {/* 3. Weighted Aggregate Confidence */}
             <View style={styles.aggregateRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.aggregateTitle}>Weighted Match Confidence</Text>
@@ -419,7 +410,6 @@ export default function MatchAlertScreen() {
             </View>
           </View>
 
-          {/* Matched Attribute Badges */}
           <Text style={styles.attrSectionLabel}>Corroborated Physical & Contextual Attributes</Text>
           <View style={styles.attrWrap}>
             {matchedAttributes.map((attr, idx) => (
@@ -430,7 +420,6 @@ export default function MatchAlertScreen() {
           </View>
         </View>
 
-        {/* FISWG Morphological Evaluation Checklist Card (RRL p. 23) */}
         <View style={styles.card}>
           <View style={styles.fiswgHeader}>
             <View style={{ flex: 1 }}>

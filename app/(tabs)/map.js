@@ -17,7 +17,6 @@ import {
   computeHotspots,
 } from '../../constants/barangays';
 
-// Cebu City center — MapLibre uses [longitude, latitude] order
 const CEBU_CENTER = [CEBU_CITY_CENTER.longitude, CEBU_CITY_CENTER.latitude];
 
 const OSM_STYLE = {
@@ -71,7 +70,6 @@ export default function MapScreen() {
           setHasGpsFix(true);
         }
       } catch {
-        // Default to Cebu City Center
       }
     })();
   }, []);
@@ -146,7 +144,6 @@ export default function MapScreen() {
         </View>
       </View>
 
-      {/* Type + Geolocation Radius Filter Bar (Manuscript Fig 20 & IT-C5) */}
       <View style={styles.controlsWrap}>
         <ScrollView
           horizontal
@@ -232,7 +229,6 @@ export default function MapScreen() {
           </View>
         )}
 
-        {/* Selected Pin Callout Card with Distance & Action Links */}
         {selectedPin && (
           <View style={styles.calloutCard}>
             <View style={styles.calloutHeader}>
@@ -311,7 +307,6 @@ export default function MapScreen() {
         )}
       </View>
 
-      {/* Bottom Legend + Top Barangay Hotspots Strip */}
       <View style={styles.bottomBar}>
         {hotspots.length > 0 && (
           <ScrollView

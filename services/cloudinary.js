@@ -1,11 +1,3 @@
-// Free image hosting via Cloudinary — no billing required, unlike Firebase
-// Storage. Sign up at https://cloudinary.com/users/register/free, then create
-// an UNSIGNED upload preset under Settings → Upload → Upload presets.
-//
-// Uses expo-file-system's File.upload() (multipart) instead of fetch+FormData:
-// Expo's native fetch module in SDK 57 rejects the classic React Native
-// `{ uri, name, type }` FormData file shape with "Unsupported FormDataPart
-// implementation". File.upload() is the purpose-built replacement.
 import { File, UploadType } from 'expo-file-system';
 
 const CLOUD_NAME = 'px9joql3';

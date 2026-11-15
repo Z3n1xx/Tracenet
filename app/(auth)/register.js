@@ -356,7 +356,6 @@ export default function RegisterScreen() {
         onClose={() => setPrivacyVisible(false)}
       />
 
-      {/* Searchable 80-Barangay Picker Modal */}
       <Modal
         visible={barangayModalVisible}
         animationType="slide"

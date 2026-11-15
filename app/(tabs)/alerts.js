@@ -139,7 +139,6 @@ export default function AlertsScreen() {
   const alerts = useMemo(() => {
     const reportMap = new Map(reports.map((r) => [r.id, r]));
 
-    // 1. Live AI Match Alerts from `matches` collection
     const matchAlerts = matches.map((m) => {
       const missing = reportMap.get(m.missingReportId);
       const sighting = reportMap.get(m.sightingReportId);
@@ -161,25 +160,6 @@ export default function AlertsScreen() {
       };
     });
 
-    // If no live match docs exist yet, include the canonical Manuscript Figure 18 demo match alert
-    if (matchAlerts.length === 0) {
-      matchAlerts.push({
-        id: 'match-demo-101',
-        matchId: '',
-        reportId: '',
-        type: 'AI Match',
-        severity: 'critical',
-        confidence: '87.8',
-        title: 'Potential AI Match Found for Maria Santos (#2038)',
-        detail:
-          '87.8% weighted confidence (88.5% Facial + 85.2% Text) • Sighted at Brgy. Mabolo, Cebu City',
-        time: 'Active Demo',
-        timestampMs: Date.now() + 1000,
-        read: readIds.has('match-demo-101'),
-      });
-    }
-
-    // 2. Case Status & Activity Alerts from `reports` collection
     const reportAlerts = reports.map((r) => {
       const meta = STATUS_META[r.status] || STATUS_META.submitted;
       return {

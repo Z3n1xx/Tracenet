@@ -110,7 +110,6 @@ function ReportForm({ typeParam, missingIdParam }) {
           }
         }
       } catch {
-        // non-blocking
       }
     })();
   }, []);
@@ -609,7 +608,6 @@ function ReportForm({ typeParam, missingIdParam }) {
         </TouchableOpacity>
       </KeyboardAwareScrollView>
 
-      {/* Searchable 80-Barangay Modal */}
       <Modal
         visible={barangayModalVisible}
         animationType="slide"
@@ -670,7 +668,6 @@ function ReportForm({ typeParam, missingIdParam }) {
         </View>
       </Modal>
 
-      {/* Interactive MapLibre Pin-Drop Modal */}
       <Modal
         visible={mapModalVisible}
         animationType="slide"

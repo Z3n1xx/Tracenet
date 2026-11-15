@@ -9,19 +9,6 @@ import { auth, db } from '../services/firebase';
 import Colors from '../constants/colors';
 import { inferBarangay } from '../constants/barangays';
 
-const DEMO_CASE = {
-  id: '2038',
-  type: 'missing',
-  name: 'Maria Santos',
-  age: 34,
-  sex: 'Female',
-  barangay: 'Labangon',
-  location: 'Brgy. Labangon, Cebu City',
-  description: 'White blouse, blue jeans, wearing eyeglasses',
-  reportedByName: 'Juan dela Cruz',
-  status: 'verified',
-};
-
 const STAGE_ORDER = ['submitted', 'verified', 'forwarded', 'resolved'];
 
 const CANCEL_REASONS = [
@@ -70,11 +57,10 @@ function StepIcon({ status }) {
 
 export default function CaseStatusScreen() {
   const { id } = useLocalSearchParams();
-  const [caseData, setCaseData] = useState(id ? null : DEMO_CASE);
+  const [caseData, setCaseData] = useState(null);
   const [loading, setLoading] = useState(!!id);
   const [acting, setActing] = useState(false);
 
-  // Edit Modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editName, setEditName] = useState('');
   const [editAge, setEditAge] = useState('');
@@ -83,7 +69,6 @@ export default function CaseStatusScreen() {
   const [editCircumstances, setEditCircumstances] = useState('');
   const [editContact, setEditContact] = useState('');
 
-  // Cancel / Withdraw Modal state
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [selectedReason, setSelectedReason] = useState(CANCEL_REASONS[0]);
   const [customReason, setCustomReason] = useState('');
@@ -267,7 +252,6 @@ export default function CaseStatusScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Cancelled Banner */}
         {isCancelled && (
           <View style={styles.cancelledBanner}>
             <Text style={styles.cancelledTitle}>✕ Report Withdrawn</Text>
@@ -277,7 +261,6 @@ export default function CaseStatusScreen() {
           </View>
         )}
 
-        {/* Escalated to CCPO Banner */}
         {currentStatus === 'forwarded' && (
           <View style={styles.ccpoBanner}>
             <View style={{ flex: 1 }}>
@@ -295,7 +278,6 @@ export default function CaseStatusScreen() {
           </View>
         )}
 
-        {/* Progress Timeline */}
         {!isCancelled && (
           <>
             <Text style={styles.sectionTitle}>Case Progress Timeline</Text>
@@ -339,7 +321,6 @@ export default function CaseStatusScreen() {
           </>
         )}
 
-        {/* Case Details Card */}
         <Text style={styles.sectionTitle}>Subject & Report Details</Text>
         <View style={styles.detailsCard}>
           {caseData.photoUrl && (
@@ -384,7 +365,6 @@ export default function CaseStatusScreen() {
           </Text>
         </View>
 
-        {/* Community Action for active missing cases */}
         {isActive && caseData.type !== 'sighting' && (
           <TouchableOpacity
             style={styles.sightingActionBtn}
@@ -398,7 +378,6 @@ export default function CaseStatusScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Citizen Owner Lifecycle Actions (Figure 19, IT-C5, IT-C9) */}
         {isOwner && isActive && (
           <View style={styles.ownerActionsCard}>
             <Text style={styles.ownerActionsTitle}>Manage Your Report</Text>
@@ -439,7 +418,6 @@ export default function CaseStatusScreen() {
         )}
       </ScrollView>
 
-      {/* Edit Report Modal */}
       <Modal
         visible={editModalVisible}
         animationType="slide"
@@ -515,7 +493,6 @@ export default function CaseStatusScreen() {
         </View>
       </Modal>
 
-      {/* Withdraw / Cancel Report with Reason Modal (IT-C9) */}
       <Modal
         visible={cancelModalVisible}
         animationType="slide"

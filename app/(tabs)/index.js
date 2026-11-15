@@ -94,33 +94,25 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Potential Match Banner (Manuscript Figure 15 & Figure 18) */}
-        <TouchableOpacity
-          style={styles.matchBanner}
-          onPress={() =>
-            router.push(
-              pendingMatches.length > 0
-                ? `/match-alert?id=${pendingMatches[0].id}`
-                : '/match-alert'
-            )
-          }
-          activeOpacity={0.85}
-        >
-          <Text style={styles.matchBannerIcon}>🤖</Text>
-          <View style={styles.matchBannerText}>
-            <Text style={styles.matchBannerTitle}>
-              {pendingMatches.length > 0
-                ? `${pendingMatches.length} potential AI match${pendingMatches.length > 1 ? 'es' : ''} found`
-                : '80/20 AI Match Alert Active — 87.8% Confidence'}
-            </Text>
-            <Text style={styles.matchBannerSub}>
-              80% Facial Recognition + 20% Text Similarity — Tap to review
-            </Text>
-          </View>
-          <Text style={styles.matchBannerArrow}>›</Text>
-        </TouchableOpacity>
+        {pendingMatches.length > 0 && (
+          <TouchableOpacity
+            style={styles.matchBanner}
+            onPress={() => router.push(`/match-alert?id=${pendingMatches[0].id}`)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.matchBannerIcon}>🤖</Text>
+            <View style={styles.matchBannerText}>
+              <Text style={styles.matchBannerTitle}>
+                {pendingMatches.length} potential AI match{pendingMatches.length > 1 ? 'es' : ''} found
+              </Text>
+              <Text style={styles.matchBannerSub}>
+                80% Facial Recognition + 20% Text Similarity — Tap to review
+              </Text>
+            </View>
+            <Text style={styles.matchBannerArrow}>›</Text>
+          </TouchableOpacity>
+        )}
 
-        {/* Quick Actions */}
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actionsRow}>
           <TouchableOpacity
@@ -141,7 +133,6 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* My Active Cases */}
         <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>My Active Cases</Text>
         {cases.length === 0 && (
           <Text style={styles.emptyText}>You haven't filed any reports yet.</Text>
@@ -166,7 +157,6 @@ export default function HomeScreen() {
           </TouchableOpacity>
         ))}
 
-        {/* Notifications */}
         <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>Notifications</Text>
         {verifiedNotifications.length === 0 && (
           <Text style={styles.emptyText}>No notifications yet.</Text>
