@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet,
+  StyleSheet, ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { collection, onSnapshot } from 'firebase/firestore';
@@ -244,24 +244,27 @@ export default function AlertsScreen() {
         </View>
       </View>
 
-      <FlatList
-        data={types}
-        keyExtractor={(t) => t}
+      <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterList}
         style={styles.filterBar}
-        renderItem={({ item }) => (
+      >
+        {types.map((item) => (
           <TouchableOpacity
+            key={item}
             style={[styles.filterBtn, filter === item && styles.filterBtnActive]}
             onPress={() => setFilter(item)}
           >
-            <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>
+            <Text
+              style={[styles.filterText, filter === item && styles.filterTextActive]}
+              numberOfLines={1}
+            >
               {item === 'AI Match' ? '🤖 AI Match' : item}
             </Text>
           </TouchableOpacity>
-        )}
-      />
+        ))}
+      </ScrollView>
 
       <FlatList
         data={filtered}
@@ -304,15 +307,19 @@ const styles = StyleSheet.create({
   },
   markAllText: { color: Colors.white, fontSize: 11, fontWeight: '700' },
   filterBar: {
+    flexGrow: 0,
+    flexShrink: 0,
     backgroundColor: Colors.white,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    maxHeight: 52,
   },
-  filterList: { paddingHorizontal: 12, paddingVertical: 9, gap: 8 },
+  filterList: { flexGrow: 1, alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
   filterBtn: {
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 5,
+    paddingVertical: 7,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.border,

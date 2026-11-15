@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, Image, Alert, Modal, FlatList,
+  StyleSheet, Image, Alert, Modal, FlatList,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { Map, Camera, Marker } from '@maplibre/maplibre-react-native';
@@ -18,6 +19,7 @@ import {
   getBarangayCoords,
   inferBarangay,
 } from '../../constants/barangays';
+import { sanitizeName, sanitizeAge } from '../../utils/sanitize';
 
 const OSM_STYLE = {
   version: 8,
@@ -51,6 +53,16 @@ function formatNowTime() {
 
 export default function ReportScreen() {
   const { type: typeParam, missingId: missingIdParam } = useLocalSearchParams();
+  return (
+    <ReportForm
+      key={typeParam || 'missing'}
+      typeParam={typeParam}
+      missingIdParam={missingIdParam}
+    />
+  );
+}
+
+function ReportForm({ typeParam, missingIdParam }) {
   const [reportType, setReportType] = useState(
     typeParam === 'sighting' ? 'sighting' : 'missing'
   );
@@ -144,7 +156,11 @@ export default function ReportScreen() {
 
       const [place] = await Location.reverseGeocodeAsync(nextCoords);
       if (place) {
-        const parts = [place.street, place.district || place.subregion || (inferred ? `Brgy. ${inferred}` : null), 'Cebu City'].filter(Boolean);
+        const parts = [
+          place.street,
+          place.district || place.subregion || (inferred ? `Brgy. ${inferred}` : null),
+          'Cebu City',
+        ].filter(Boolean);
         setLocation(parts.join(', ') || `Brgy. ${inferred || 'Cebu City'}`);
       } else {
         setLocation(
@@ -167,7 +183,6 @@ export default function ReportScreen() {
   }
 
   function handleMapPress(event) {
-    // MapLibre onPress event may pass coordinates in geometry.coordinates or lngLat
     const rawCoords =
       event?.geometry?.coordinates ||
       event?.nativeEvent?.geometry?.coordinates ||
@@ -245,7 +260,8 @@ export default function ReportScreen() {
       if (photo) {
         try {
           photoUrl = await uploadPhoto(photo);
-        } catch {
+        } catch (e) {
+          console.warn('Photo upload failed:', e.message);
           Alert.alert(
             'Photo Upload Notice',
             'Your report will be saved immediately while the photo upload retries.'
@@ -253,14 +269,26 @@ export default function ReportScreen() {
         }
       }
 
+      let finalCoords = coords;
+      if (!finalCoords && finalLocation) {
+        try {
+          const geocoded = await Location.geocodeAsync(finalLocation);
+          if (geocoded.length > 0) {
+            finalCoords = { latitude: geocoded[0].latitude, longitude: geocoded[0].longitude };
+          }
+        } catch (e) {
+          console.warn('Geocoding failed:', e.message);
+        }
+      }
+
       const resolvedBrgy =
         barangay ||
         inferBarangay({
           location: finalLocation,
-          latitude: coords?.latitude,
-          longitude: coords?.longitude,
+          latitude: finalCoords?.latitude,
+          longitude: finalCoords?.longitude,
         });
-      const resolvedCoords = coords || getBarangayCoords(resolvedBrgy);
+      const resolvedCoords = finalCoords || getBarangayCoords(resolvedBrgy);
 
       const payload = {
         type: isSighting ? 'sighting' : 'missing',
@@ -287,7 +315,6 @@ export default function ReportScreen() {
 
       const docRef = await addDoc(collection(db, 'reports'), payload);
 
-      // Run 80/20 AI Matching against active opposite-type reports in the background
       const createdMatches = await triggerAutoMatchForReport({
         id: docRef.id,
         ...payload,
@@ -333,7 +360,6 @@ export default function ReportScreen() {
             : 'Official Cebu City Missing Person Intake (Manuscript Fig. 16)'}
         </Text>
 
-        {/* Segmented Mode Switcher */}
         <View style={styles.modeSwitchRow}>
           <TouchableOpacity
             style={[styles.modeTab, !isSighting && styles.modeTabActive]}
@@ -354,8 +380,13 @@ export default function ReportScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Photo Upload Card */}
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+        extraScrollHeight={20}
+      >
         <TouchableOpacity
           style={styles.photoUpload}
           onPress={photo ? undefined : pickFromGallery}
@@ -391,7 +422,6 @@ export default function ReportScreen() {
           )}
         </TouchableOpacity>
 
-        {/* Person Details Card */}
         <View style={styles.formCard}>
           <Text style={styles.sectionTitle}>1. Subject Identification</Text>
 
@@ -403,7 +433,7 @@ export default function ReportScreen() {
             placeholder={isSighting ? 'Leave blank if unidentified' : 'e.g. Maria Santos'}
             placeholderTextColor={Colors.textGray}
             value={name}
-            onChangeText={setName}
+            onChangeText={(t) => setName(sanitizeName(t))}
           />
 
           <View style={styles.rowFields}>
@@ -414,8 +444,9 @@ export default function ReportScreen() {
                 placeholder="34"
                 placeholderTextColor={Colors.textGray}
                 value={age}
-                onChangeText={setAge}
+                onChangeText={(t) => setAge(sanitizeAge(t))}
                 keyboardType="number-pad"
+                maxLength={3}
               />
             </View>
             <View style={styles.rowFieldHalf}>
@@ -464,7 +495,6 @@ export default function ReportScreen() {
           </View>
         </View>
 
-        {/* Geolocation & Pin-Drop Card (Manuscript Figures 16 & 17) */}
         <View style={styles.formCard}>
           <Text style={styles.sectionTitle}>2. Cebu City Location & Pin-Drop</Text>
 
@@ -521,7 +551,6 @@ export default function ReportScreen() {
           ) : null}
         </View>
 
-        {/* Clothing & Distinguishing Marks Card (20% NLP Engine) */}
         <View style={styles.formCard}>
           <Text style={styles.sectionTitle}>3. Clothing & Distinguishing Marks (20% AI Weight)</Text>
 
@@ -578,7 +607,7 @@ export default function ReportScreen() {
               : 'Submit Missing Person Report →'}
           </Text>
         </TouchableOpacity>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {/* Searchable 80-Barangay Modal */}
       <Modal
@@ -641,7 +670,7 @@ export default function ReportScreen() {
         </View>
       </Modal>
 
-      {/* Interactive MapLibre Pin-Drop Modal (Manuscript Fig 16 & 17) */}
+      {/* Interactive MapLibre Pin-Drop Modal */}
       <Modal
         visible={mapModalVisible}
         animationType="slide"
@@ -652,7 +681,7 @@ export default function ReportScreen() {
             <View>
               <Text style={styles.mapModalTitle}>Drop Pin on Location</Text>
               <Text style={styles.mapModalSub}>
-                Tap anywhere on the Cebu City map or select a Barangay preset
+                Tap anywhere on the Cebu City map to set the exact pin
               </Text>
             </View>
             <TouchableOpacity
@@ -678,7 +707,6 @@ export default function ReportScreen() {
               </Marker>
             </Map>
 
-            {/* Quick Nudge Controls & Coordinate Readout */}
             <View style={styles.mapCoordFloating}>
               <Text style={styles.mapCoordFloatingText}>
                 📌 {tempCoords.latitude.toFixed(5)}° N, {tempCoords.longitude.toFixed(5)}° E • Brgy.{' '}
@@ -729,7 +757,7 @@ const styles = StyleSheet.create({
   modeTabText: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.85)' },
   modeTabTextActive: { color: Colors.primary, fontWeight: '800' },
 
-  scroll: { padding: 16, paddingBottom: 44, gap: 14 },
+  scroll: { padding: 16, paddingBottom: 120, gap: 14 },
   photoUpload: {
     backgroundColor: Colors.white,
     borderRadius: 16,

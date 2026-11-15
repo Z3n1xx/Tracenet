@@ -37,11 +37,6 @@ export default function StarterScreen() {
         <Text style={styles.tagline}>
           Missing Person Detection &amp; Coordination{'\n'}System for Cebu City
         </Text>
-        <View style={styles.dots}>
-          {Array.from({ length: 8 }).map((_, i) => (
-            <View key={i} style={[styles.dot, i === 3 && styles.dotActive]} />
-          ))}
-        </View>
       </View>
 
       <View style={styles.actions}>
@@ -106,13 +101,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  dots: { flexDirection: 'row', gap: 6, marginTop: 32, marginBottom: 40 },
-  dot: {
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-  },
-  dotActive: { backgroundColor: Colors.white, width: 18 },
-  actions: { gap: 12, padding: 32, paddingBottom: 48 },
+  actions: { gap: 12, padding: 32, paddingBottom: 48, marginTop: 40 },
   signInBtn: {
     backgroundColor: Colors.primary,
     borderRadius: 12,

@@ -37,6 +37,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-file-system",
       "@maplibre/maplibre-react-native",
       [
         "expo-camera",

@@ -3,10 +3,13 @@
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
     "@maplibre/maplibre-react-native": "^11.4.0",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "^9.1.0",
     "expo": "~57.0.24",
     "expo-camera": "~57.0.5",
+    "expo-file-system": "~57.0.7",
     "expo-image-picker": "~57.0.19",
     "expo-linking": "~57.0.10",
     "expo-location": "~57.0.19",
@@ -16,6 +19,7 @@
     "firebase": "^12.19.0",
     "react": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0"
   },

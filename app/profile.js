@@ -1,23 +1,29 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, ScrollView,
-  ActivityIndicator, Switch, Linking, Modal, FlatList, Alert,
+  StyleSheet, ActivityIndicator, Switch, Linking, Modal, FlatList, Alert,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { router } from 'expo-router';
 import {
-  updateProfile, EmailAuthProvider, reauthenticateWithCredential,
-  updatePassword, signOut,
+  signOut, updateProfile, EmailAuthProvider,
+  reauthenticateWithCredential, updatePassword,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
+import { uploadPhoto } from '../services/cloudinary';
 import Colors from '../constants/colors';
 import { CEBU_CITY_BARANGAYS } from '../constants/barangays';
+import PasswordInput from '../components/PasswordInput';
+import AvatarPicker from '../components/AvatarPicker';
+import DateField from '../components/DateField';
+import { sanitizeName, sanitizeAge } from '../utils/sanitize';
+import { isAgeConsistentWithBirthday } from '../utils/age';
 
 const PASSWORD_ERROR_MESSAGES = {
   'auth/invalid-credential': 'Current password is incorrect.',
   'auth/wrong-password': 'Current password is incorrect.',
-  'auth/weak-password': 'New password must be at least 6 characters.',
+  'auth/weak-password': 'New password must be at least 8 characters and include a letter and a number.',
   'auth/too-many-requests': 'Too many attempts. Please try again later.',
 };
 
@@ -80,11 +86,17 @@ const SAFETY_TIPS = [
 ];
 
 export default function ProfileScreen() {
+  const [photo, setPhoto] = useState(null);
   const [name, setName] = useState('');
+  const [age, setAge] = useState('');
+  const [birthday, setBirthday] = useState('');
+  const [gender, setGender] = useState('Female');
+  const [address, setAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [barangay, setBarangay] = useState('');
   const [email, setEmail] = useState('');
   const [roleLabel, setRoleLabel] = useState('Citizen / Family Member');
+  const [original, setOriginal] = useState({});
 
   const [pushEnabled, setPushEnabled] = useState(true);
   const [matchAlerts, setMatchAlerts] = useState(true);
@@ -120,7 +132,12 @@ export default function ProfileScreen() {
         const snap = await getDoc(doc(db, 'users', uid));
         if (snap.exists()) {
           const data = snap.data();
+          setPhoto(data.photoUrl || null);
           setName(data.name || auth.currentUser.displayName || '');
+          setAge(data.age ? String(data.age) : '');
+          setBirthday(data.birthday || '');
+          setGender(data.gender || 'Female');
+          setAddress(data.address || '');
           setContactNumber(data.contactNumber || '');
           setBarangay(data.barangay || '');
           setEmail(data.email || auth.currentUser.email || '');
@@ -130,6 +147,16 @@ export default function ProfileScreen() {
             setMatchAlerts(data.notificationPrefs.matchAlerts ?? true);
             setNearbySightings(data.notificationPrefs.nearbySightings ?? true);
           }
+          setOriginal({
+            photoUrl: data.photoUrl || null,
+            name: data.name || '',
+            age: data.age ? String(data.age) : '',
+            birthday: data.birthday || '',
+            gender: data.gender || 'Female',
+            address: data.address || '',
+            contactNumber: data.contactNumber || '',
+            barangay: data.barangay || '',
+          });
         } else {
           setName(auth.currentUser.displayName || '');
           setEmail(auth.currentUser.email || '');
@@ -147,18 +174,49 @@ export default function ProfileScreen() {
       setError('Full name cannot be empty.');
       return;
     }
+    if (birthday && !/^\d{2}\/\d{2}\/\d{4}$/.test(birthday)) {
+      setError('Please enter a valid birthday (MM/DD/YYYY).');
+      return;
+    }
+    if (age && birthday && !isAgeConsistentWithBirthday(age, birthday)) {
+      setError("The age you entered doesn't match your birthday. Please check both.");
+      return;
+    }
+    const unchanged =
+      photo === original.photoUrl &&
+      name === original.name &&
+      age === original.age &&
+      birthday === original.birthday &&
+      gender === original.gender &&
+      address === original.address &&
+      contactNumber === original.contactNumber &&
+      barangay === original.barangay;
+    if (unchanged) {
+      setError('No changes to save.');
+      return;
+    }
+
     setSaving(true);
     setError('');
     setSaved(false);
     try {
       const uid = auth.currentUser.uid;
+      let photoUrl = original.photoUrl || null;
+      if (photo && photo !== original.photoUrl) {
+        photoUrl = await uploadPhoto(photo);
+      }
       await setDoc(
         doc(db, 'users', uid),
         {
           name: name.trim(),
+          age: age ? Number(age) : null,
+          birthday,
+          gender,
+          address: address.trim(),
           contactNumber: contactNumber.trim(),
           barangay,
           city: 'Cebu City',
+          photoUrl,
           notificationPrefs: {
             pushEnabled,
             matchAlerts,
@@ -167,7 +225,21 @@ export default function ProfileScreen() {
         },
         { merge: true }
       );
-      await updateProfile(auth.currentUser, { displayName: name.trim() });
+      await updateProfile(auth.currentUser, {
+        displayName: name.trim(),
+        photoURL: photoUrl || undefined,
+      });
+      setPhoto(photoUrl);
+      setOriginal({
+        photoUrl,
+        name: name.trim(),
+        age,
+        birthday,
+        gender,
+        address: address.trim(),
+        contactNumber: contactNumber.trim(),
+        barangay,
+      });
       setSaved(true);
     } catch {
       setError('Failed to save changes. Please try again.');
@@ -204,8 +276,12 @@ export default function ProfileScreen() {
       setPasswordError('Please fill in all password fields.');
       return;
     }
-    if (newPassword.length < 6) {
-      setPasswordError('New password must be at least 6 characters.');
+    if (newPassword.length < 8 || !/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      setPasswordError('New password must be at least 8 characters and include a letter and a number.');
+      return;
+    }
+    if (newPassword === currentPassword) {
+      setPasswordError('New password must be different from your current password.');
       return;
     }
     if (newPassword !== confirmNewPassword) {
@@ -236,9 +312,15 @@ export default function ProfileScreen() {
     });
   }
 
-  async function handleLogout() {
-    await signOut(auth);
-    router.replace('/(auth)/login');
+  function handleLogout() {
+    Alert.alert('Log Out', 'Are you sure you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Log Out',
+        style: 'destructive',
+        onPress: () => signOut(auth).then(() => router.replace('/(auth)/login')),
+      },
+    ]);
   }
 
   const initials = (name || email || 'C')
@@ -257,10 +339,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           <View>
@@ -293,12 +372,22 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+        extraScrollHeight={20}
+      >
         {/* Section 1: Personal & Barangay Details */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>👤 Personal & Barangay Details</Text>
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {saved ? <Text style={styles.saved}>✓ Profile & barangay preferences saved.</Text> : null}
+
+          <AvatarPicker
+            uri={photo}
+            onChange={(uri) => { setPhoto(uri); setSaved(false); setError(''); }}
+          />
 
           <Text style={styles.label}>Full Name</Text>
           <TextInput
@@ -306,7 +395,54 @@ export default function ProfileScreen() {
             placeholder="Juan dela Cruz"
             placeholderTextColor={Colors.textGray}
             value={name}
-            onChangeText={(v) => { setName(v); setSaved(false); }}
+            onChangeText={(v) => { setName(sanitizeName(v)); setSaved(false); setError(''); }}
+          />
+
+          <View style={styles.rowFields}>
+            <View style={styles.rowHalf}>
+              <Text style={styles.label}>Age</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="25"
+                placeholderTextColor={Colors.textGray}
+                value={age}
+                onChangeText={(v) => { setAge(sanitizeAge(v)); setSaved(false); setError(''); }}
+                keyboardType="number-pad"
+                maxLength={3}
+              />
+            </View>
+            <View style={styles.rowHalf}>
+              <Text style={styles.label}>Birthday</Text>
+              <DateField
+                value={birthday}
+                onChange={(v) => { setBirthday(v); setSaved(false); setError(''); }}
+                style={styles.input}
+              />
+            </View>
+          </View>
+
+          <Text style={styles.label}>Gender</Text>
+          <View style={styles.genderRow}>
+            {['Female', 'Male'].map((g) => (
+              <TouchableOpacity
+                key={g}
+                style={[styles.genderBtn, gender === g && styles.genderBtnActive]}
+                onPress={() => { setGender(g); setSaved(false); setError(''); }}
+              >
+                <Text style={[styles.genderText, gender === g && styles.genderTextActive]}>
+                  {g}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.label}>Street / Home Address</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="123 Rizal St., Cebu City"
+            placeholderTextColor={Colors.textGray}
+            value={address}
+            onChangeText={(v) => { setAddress(v); setSaved(false); setError(''); }}
           />
 
           <Text style={styles.label}>Contact Number</Text>
@@ -315,7 +451,7 @@ export default function ProfileScreen() {
             placeholder="09XX-XXX-XXXX"
             placeholderTextColor={Colors.textGray}
             value={contactNumber}
-            onChangeText={(v) => { setContactNumber(v); setSaved(false); }}
+            onChangeText={(v) => { setContactNumber(v); setSaved(false); setError(''); }}
             keyboardType="phone-pad"
           />
 
@@ -328,12 +464,7 @@ export default function ProfileScreen() {
             }}
             activeOpacity={0.8}
           >
-            <Text
-              style={[
-                styles.selectorText,
-                !barangay && { color: Colors.textGray },
-              ]}
-            >
+            <Text style={[styles.selectorText, !barangay && { color: Colors.textGray }]}>
               {barangay ? `Brgy. ${barangay}, Cebu City` : 'Select your Barangay (80 Barangays)'}
             </Text>
             <Text style={styles.selectorChevron}>▾</Text>
@@ -356,7 +487,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Section 2: Notification Preferences (Figure 22 & Workflow Fig 3.2) */}
+        {/* Section 2: Notification Preferences */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>🔔 Notification Preferences</Text>
           <Text style={styles.sectionSub}>
@@ -463,33 +594,30 @@ export default function ProfileScreen() {
           {passwordChanged ? <Text style={styles.saved}>✓ Password updated successfully.</Text> : null}
 
           <Text style={styles.label}>Current Password</Text>
-          <TextInput
+          <PasswordInput
             style={styles.input}
             placeholder="••••••••"
             placeholderTextColor={Colors.textGray}
             value={currentPassword}
             onChangeText={(v) => { setCurrentPassword(v); setPasswordChanged(false); }}
-            secureTextEntry
           />
 
           <Text style={styles.label}>New Password</Text>
-          <TextInput
+          <PasswordInput
             style={styles.input}
-            placeholder="At least 6 characters"
+            placeholder="At least 8 characters (letters & numbers)"
             placeholderTextColor={Colors.textGray}
             value={newPassword}
             onChangeText={(v) => { setNewPassword(v); setPasswordChanged(false); }}
-            secureTextEntry
           />
 
           <Text style={styles.label}>Confirm New Password</Text>
-          <TextInput
+          <PasswordInput
             style={styles.input}
             placeholder="Re-enter new password"
             placeholderTextColor={Colors.textGray}
             value={confirmNewPassword}
             onChangeText={(v) => { setConfirmNewPassword(v); setPasswordChanged(false); }}
-            secureTextEntry
           />
 
           <TouchableOpacity
@@ -502,7 +630,7 @@ export default function ProfileScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {/* Searchable 80-Barangay Picker Modal */}
       <Modal
@@ -550,6 +678,7 @@ export default function ProfileScreen() {
                     onPress={() => {
                       setBarangay(item);
                       setSaved(false);
+                      setError('');
                       setBarangayModalVisible(false);
                     }}
                   >
@@ -569,7 +698,7 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -633,7 +762,7 @@ const styles = StyleSheet.create({
   },
   brgyPillText: { fontSize: 10, fontWeight: '800', color: '#92400E' },
 
-  scroll: { padding: 16, paddingBottom: 44, gap: 16 },
+  scroll: { padding: 16, paddingBottom: 150, gap: 16 },
   card: {
     backgroundColor: Colors.white,
     borderRadius: 16,
@@ -654,6 +783,22 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: Colors.background,
   },
+  rowFields: { flexDirection: 'row', gap: 10 },
+  rowHalf: { flex: 1 },
+  genderRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  genderBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+  },
+  genderBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  genderText: { fontSize: 13, fontWeight: '600', color: Colors.textGray },
+  genderTextActive: { color: Colors.primary, fontWeight: '700' },
+
   selectorButton: {
     borderWidth: 1,
     borderColor: Colors.border,

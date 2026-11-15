@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, ScrollView,
+  StyleSheet,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { router } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 import Colors from '../../constants/colors';
+import PasswordInput from '../../components/PasswordInput';
 
 const AUTH_ERROR_MESSAGES = {
   'auth/invalid-email': 'Please enter a valid email address.',
@@ -45,16 +47,18 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Sign In</Text>
         <Text style={styles.headerSub}>Welcome back to TraceNet</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+        extraScrollHeight={20}
+      >
         <View style={styles.iconArea}>
           <View style={styles.iconCircle}>
             <Text style={styles.icon}>🔍</Text>
@@ -76,16 +80,18 @@ export default function LoginScreen() {
           />
 
           <Text style={styles.label}>Password</Text>
-          <TextInput
+          <PasswordInput
             style={styles.input}
             placeholder="••••••••"
             placeholderTextColor={Colors.textGray}
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
           />
 
-          <TouchableOpacity style={styles.forgotRow} onPress={handleForgotPassword}>
+          <TouchableOpacity
+            style={styles.forgotRow}
+            onPress={handleForgotPassword}
+          >
             <Text style={styles.forgot}>Forgot password?</Text>
           </TouchableOpacity>
 
@@ -104,8 +110,8 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }
 
@@ -120,7 +126,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: '800', color: Colors.white },
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 4 },
-  scroll: { flexGrow: 1, padding: 28 },
+  scroll: { flexGrow: 1, padding: 28, paddingBottom: 150 },
   iconArea: { alignItems: 'center', marginTop: -48, marginBottom: 24 },
   iconCircle: {
     width: 80,
