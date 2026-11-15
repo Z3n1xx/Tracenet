@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/colors';
 
 export default function PasswordInput({ style, ...props }) {
@@ -17,7 +18,11 @@ export default function PasswordInput({ style, ...props }) {
         onPress={() => setVisible((v) => !v)}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Text style={styles.toggleText}>{visible ? 'Hide' : 'Show'}</Text>
+        <Ionicons
+          name={visible ? 'eye-off' : 'eye'}
+          size={20}
+          color={Colors.primary}
+        />
       </TouchableOpacity>
     </View>
   );
@@ -25,7 +30,13 @@ export default function PasswordInput({ style, ...props }) {
 
 const styles = StyleSheet.create({
   wrap: { position: 'relative', justifyContent: 'center' },
-  inputWithButton: { paddingRight: 64 },
-  toggle: { position: 'absolute', right: 14, top: 0, bottom: 0, justifyContent: 'center' },
-  toggleText: { fontSize: 13, fontWeight: '700', color: Colors.primary },
+  inputWithButton: { paddingRight: 48 },
+  toggle: {
+    position: 'absolute',
+    right: 14,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
