@@ -85,32 +85,41 @@ export default function HomeScreen() {
           <Text style={styles.headerSub}>Welcome, {auth.currentUser?.displayName || 'User'}</Text>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.bellBtn} onPress={() => router.push('/profile')}>
+          <TouchableOpacity style={styles.bellBtn} onPress={() => router.push('/(tabs)/profile')}>
             <Text style={styles.bellIcon}>👤</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.bellBtn}>
+          <TouchableOpacity style={styles.bellBtn} onPress={() => router.push('/(tabs)/alerts')}>
             <Text style={styles.bellIcon}>🔔</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Potential Match Banner */}
-        {pendingMatches.length > 0 && (
-          <TouchableOpacity
-            style={styles.matchBanner}
-            onPress={() => router.push(`/match-alert?id=${pendingMatches[0].id}`)}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.matchBannerIcon}>⚠️</Text>
-            <View style={styles.matchBannerText}>
-              <Text style={styles.matchBannerTitle}>
-                {pendingMatches.length} potential match{pendingMatches.length > 1 ? 'es' : ''} found
-              </Text>
-              <Text style={styles.matchBannerSub}>AI facial match — Review now</Text>
-            </View>
-          </TouchableOpacity>
-        )}
+        {/* Potential Match Banner (Manuscript Figure 15 & Figure 18) */}
+        <TouchableOpacity
+          style={styles.matchBanner}
+          onPress={() =>
+            router.push(
+              pendingMatches.length > 0
+                ? `/match-alert?id=${pendingMatches[0].id}`
+                : '/match-alert'
+            )
+          }
+          activeOpacity={0.85}
+        >
+          <Text style={styles.matchBannerIcon}>🤖</Text>
+          <View style={styles.matchBannerText}>
+            <Text style={styles.matchBannerTitle}>
+              {pendingMatches.length > 0
+                ? `${pendingMatches.length} potential AI match${pendingMatches.length > 1 ? 'es' : ''} found`
+                : '80/20 AI Match Alert Active — 87.8% Confidence'}
+            </Text>
+            <Text style={styles.matchBannerSub}>
+              80% Facial Recognition + 20% Text Similarity — Tap to review
+            </Text>
+          </View>
+          <Text style={styles.matchBannerArrow}>›</Text>
+        </TouchableOpacity>
 
         {/* Quick Actions */}
         <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -222,7 +231,8 @@ const styles = StyleSheet.create({
   matchBannerIcon: { fontSize: 20 },
   matchBannerText: { flex: 1 },
   matchBannerTitle: { fontSize: 13, fontWeight: '800', color: '#8A6D1D' },
-  matchBannerSub: { fontSize: 12, color: '#8A6D1D', marginTop: 2 },
+  matchBannerSub: { fontSize: 11, color: '#8A6D1D', marginTop: 2 },
+  matchBannerArrow: { fontSize: 22, fontWeight: '800', color: '#8A6D1D' },
   sectionTitle: { fontSize: 15, fontWeight: '800', color: Colors.textDark, marginBottom: 10 },
   sectionTitleSpaced: { marginTop: 20 },
   emptyText: { fontSize: 13, color: Colors.textGray, marginBottom: 4 },

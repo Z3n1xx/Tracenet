@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert,
+  StyleSheet, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 import Colors from '../../constants/colors';
 
@@ -22,17 +22,9 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  async function handleForgotPassword() {
-    if (!email) {
-      setError('Enter your email above first, then tap "Forgot password?"');
-      return;
-    }
-    try {
-      await sendPasswordResetEmail(auth, email.trim());
-      Alert.alert('Check your email', `A password reset link has been sent to ${email.trim()}.`);
-    } catch (e) {
-      setError(AUTH_ERROR_MESSAGES[e.code] || 'Could not send reset email. Please try again.');
-    }
+  function handleForgotPassword() {
+    const query = email.trim() ? `?email=${encodeURIComponent(email.trim())}` : '';
+    router.push(`/(auth)/forgot-password${query}`);
   }
 
   async function handleLogin() {
